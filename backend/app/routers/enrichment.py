@@ -1,6 +1,7 @@
 """Enrichment API — trigger enrichment and track progress via SSE."""
 
 import json
+import logging
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -9,9 +10,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
+from app.config import settings
 from app.database import get_session
 from app.models.content import Content
 from app.models.journalist import Journalist
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/enrichment", tags=["enrichment"])
 
@@ -22,7 +26,10 @@ async def trigger_enrichment(
     session: AsyncSession = Depends(get_session),
     _user: dict = Depends(get_current_user),
 ):
-    """Trigger full enrichment (email + articles) for a journalist."""
+    """Trigger full enrichment (articles) for a journalist.
+
+    Runs synchronously inline — no Celery worker needed.
+    """
     result = await session.execute(
         select(Journalist).where(Journalist.id == journalist_id)
     )
@@ -30,10 +37,63 @@ async def trigger_enrichment(
     if not journalist:
         raise HTTPException(status_code=404, detail="Journalist not found")
 
-    from app.tasks import enrich_journalist
+    articles_found = 0
+    errors = []
 
-    task = enrich_journalist.delay(str(journalist_id))
-    return {"task_id": task.id, "status": "queued"}
+    # Article discovery via Brave Search
+    if journalist.first_name and journalist.last_name and settings.BRAVE_SEARCH_API_KEY:
+        try:
+            from app.services.brave_search import BraveSearchService
+            from app.services.article_extractor import ArticleExtractorService
+
+            query = f"{journalist.first_name} {journalist.last_name}"
+            if journalist.media_name:
+                query += f" {journalist.media_name}"
+
+            search_service = BraveSearchService(settings.BRAVE_SEARCH_API_KEY)
+            articles = await search_service.search_articles(query, count=5)
+
+            extractor = ArticleExtractorService()
+            for article in articles:
+                # Check if already in DB
+                existing = await session.execute(
+                    select(Content).where(Content.url == article.url)
+                )
+                if existing.scalar_one_or_none():
+                    continue
+
+                # Extract full text
+                body_text = None
+                try:
+                    extracted = await extractor.extract(article.url)
+                    if extracted:
+                        body_text = extracted.text
+                except Exception:
+                    pass
+
+                content = Content(
+                    journalist_id=journalist.id,
+                    url=article.url,
+                    title=article.title,
+                    content_type="article",
+                    body_text=body_text or article.description,
+                    published_at=article.published_date,
+                )
+                session.add(content)
+                articles_found += 1
+
+            await session.commit()
+        except Exception as e:
+            logger.warning("Article enrichment failed for %s: %s", journalist_id, e)
+            errors.append(f"Articles: {e}")
+    elif not settings.BRAVE_SEARCH_API_KEY:
+        errors.append("Brave Search API key not configured")
+
+    return {
+        "status": "completed",
+        "articles_found": articles_found,
+        "errors": errors,
+    }
 
 
 @router.post("/journalists/{journalist_id}/email")

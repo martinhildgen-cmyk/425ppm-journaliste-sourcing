@@ -81,11 +81,7 @@ async def analyze_journalist(
         journalist_id, session
     )
 
-    if not articles_list:
-        raise HTTPException(
-            status_code=400,
-            detail="Le journaliste n'a pas d'articles. Lancez d'abord l'enrichissement.",
-        )
+    # Allow analysis even without articles — AI will use journalist metadata only
 
     from app.services.ai_prompts import run_full_analysis
 
