@@ -62,6 +62,12 @@ export default function JournalistDetailPage({
   const [saving, setSaving] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+  // Articles
+  const [articles, setArticles] = useState<
+    { id: string; title: string; url: string; published_at: string | null; has_text: boolean }[]
+  >([]);
+  const [enriching, setEnriching] = useState(false);
+
   // Notes
   const [notes, setNotes] = useState<Note[]>([]);
   const [newNote, setNewNote] = useState("");
@@ -93,8 +99,21 @@ export default function JournalistDetailPage({
       }
     }
 
+    async function fetchArticles() {
+      try {
+        const a = await apiFetch<typeof articles>(
+          `/enrichment/journalists/${id}/articles`,
+          { token: token ?? undefined }
+        );
+        setArticles(a);
+      } catch {
+        // ignore
+      }
+    }
+
     fetchJournalist();
     fetchNotes();
+    fetchArticles();
   }, [id, token]);
 
   const handleSave = async () => {
@@ -139,6 +158,35 @@ export default function JournalistDetailPage({
       setEditForm(updated);
     } catch {
       // error
+    }
+  };
+
+  const handleEnrich = async () => {
+    setEnriching(true);
+    try {
+      await apiFetch(`/enrichment/journalists/${id}`, {
+        method: "POST",
+        token: token ?? undefined,
+      });
+      // Poll for updates after a delay
+      setTimeout(async () => {
+        try {
+          const j = await apiFetch<Journalist>(`/journalists/${id}`, {
+            token: token ?? undefined,
+          });
+          setJournalist(j);
+          const a = await apiFetch<typeof articles>(
+            `/enrichment/journalists/${id}/articles`,
+            { token: token ?? undefined }
+          );
+          setArticles(a);
+        } catch {
+          // ignore
+        }
+        setEnriching(false);
+      }, 5000);
+    } catch {
+      setEnriching(false);
     }
   };
 
@@ -564,6 +612,66 @@ export default function JournalistDetailPage({
           <FieldDisplay label="Modifie le">
             {new Date(journalist.updated_at).toLocaleDateString("fr-FR")}
           </FieldDisplay>
+        </CardContent>
+      </Card>
+
+      {/* Enrichissement + Articles */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Articles récents</CardTitle>
+            <CardDescription>
+              Derniers articles publiés par ce journaliste
+            </CardDescription>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleEnrich}
+            disabled={enriching}
+          >
+            {enriching ? "Enrichissement..." : "Enrichir"}
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {articles.length === 0 ? (
+            <p className="text-muted-foreground text-sm">
+              Aucun article trouvé. Cliquez sur &quot;Enrichir&quot; pour lancer
+              la recherche.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {articles.map((article) => (
+                <div
+                  key={article.id}
+                  className="flex items-start justify-between rounded-md border p-3"
+                >
+                  <div className="min-w-0 flex-1">
+                    <a
+                      href={article.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm font-medium hover:underline"
+                    >
+                      {article.title || article.url}
+                    </a>
+                    {article.published_at && (
+                      <p className="text-muted-foreground mt-1 text-xs">
+                        {new Date(article.published_at).toLocaleDateString(
+                          "fr-FR"
+                        )}
+                      </p>
+                    )}
+                  </div>
+                  {article.has_text && (
+                    <Badge variant="secondary" className="ml-2 shrink-0">
+                      Texte extrait
+                    </Badge>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
