@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import ForeignKey, String, Text
+from sqlalchemy import DateTime, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -21,10 +21,9 @@ class Content(Base):
     )
     url: Mapped[str] = mapped_column(Text, nullable=False)
     title: Mapped[str | None] = mapped_column(String(1000))
-    source_type: Mapped[str | None] = mapped_column(String(100))
-    raw_text: Mapped[str | None] = mapped_column(Text)
-    published_at: Mapped[datetime | None] = mapped_column()
-    scraped_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
-    created_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
+    content_type: Mapped[str | None] = mapped_column(String(50))
+    body_text: Mapped[str | None] = mapped_column(Text)
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    ingested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     journalist = relationship("Journalist", backref="contents", lazy="selectin")

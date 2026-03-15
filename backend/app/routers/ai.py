@@ -56,7 +56,7 @@ async def _get_journalist_with_articles(
     }
 
     articles_list = [
-        {"title": a.title or "", "text": a.raw_text or ""}
+        {"title": a.title or "", "text": a.body_text or ""}
         for a in articles
     ]
 

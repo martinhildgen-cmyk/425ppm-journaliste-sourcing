@@ -201,8 +201,8 @@ async def _discover_and_extract_articles(session: AsyncSession, journalist):
             journalist_id=journalist.id,
             url=article.url,
             title=article.title,
-            source_type="article",
-            raw_text=body_text or article.description,
+            content_type="article",
+            body_text=body_text or article.description,
             published_at=article.published_date,
         )
         session.add(content)
@@ -300,7 +300,7 @@ async def _analyze_journalist_ai(journalist_id: str):
             "media_name": journalist.media_name or "",
         }
         articles_list = [
-            {"title": a.title or "", "text": a.raw_text or ""}
+            {"title": a.title or "", "text": a.body_text or ""}
             for a in articles
         ]
 
