@@ -291,11 +291,12 @@ async def run_matcher(
     # Use mid-tier model for matcher (needs more reasoning)
     if model is None:
         from app.config import settings
-        if settings.LLM_PROVIDER == "gemini":
+        effective_provider = provider or settings.LLM_PROVIDER
+        if effective_provider == "gemini":
             model = "gemini-2.5-flash"
-        elif settings.LLM_PROVIDER == "openai":
+        elif effective_provider == "openai":
             model = "gpt-4.1-mini"
-        elif settings.LLM_PROVIDER == "mistral":
+        elif effective_provider == "mistral":
             model = "mistral-medium-latest"
         llm = get_llm_service(provider=provider, model=model)
 

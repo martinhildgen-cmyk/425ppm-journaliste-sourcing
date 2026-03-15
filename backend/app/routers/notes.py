@@ -10,6 +10,7 @@ from app.database import get_session
 from app.models.journalist import Journalist
 from app.models.note import Note
 from app.schemas import NoteCreate, NoteRead
+from app.services.audit import log_action
 
 router = APIRouter(prefix="/journalists/{journalist_id}/notes", tags=["notes"])
 
@@ -44,6 +45,13 @@ async def create_note(
 
     note = Note(journalist_id=journalist_id, author_id=uuid_mod.UUID(user["id"]), body=data.body)
     session.add(note)
+    await log_action(
+        session,
+        user_id=user["id"],
+        action="create_note",
+        entity_type="journalist",
+        entity_id=str(journalist_id),
+    )
     await session.commit()
     await session.refresh(note)
     return note
@@ -65,5 +73,12 @@ async def delete_note(
     # Only author or admin can delete
     if str(note.author_id) != user["id"] and user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Not authorized to delete this note")
+    await log_action(
+        session,
+        user_id=user["id"],
+        action="delete_note",
+        entity_type="journalist",
+        entity_id=str(journalist_id),
+    )
     await session.delete(note)
     await session.commit()

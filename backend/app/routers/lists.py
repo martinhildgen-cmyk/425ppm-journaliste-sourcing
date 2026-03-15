@@ -11,6 +11,7 @@ from app.database import get_session
 from app.models.journalist import Journalist
 from app.models.list import List, ListJournalist
 from app.schemas import ListAddJournalists, ListCreate, ListDetailRead, ListRead, ListUpdate
+from app.services.audit import log_action
 
 router = APIRouter(prefix="/lists", tags=["lists"])
 
@@ -120,6 +121,15 @@ async def add_journalists_to_list(
         session.add(ListJournalist(list_id=list_id, journalist_id=jid))
         added += 1
 
+    if added > 0:
+        await log_action(
+            session,
+            user_id=_user["id"],
+            action="add_to_list",
+            entity_type="list",
+            entity_id=str(list_id),
+            details={"journalist_ids": [str(jid) for jid in data.journalist_ids], "added": added},
+        )
     await session.commit()
     return {"added": added}
 
@@ -141,5 +151,13 @@ async def remove_journalist_from_list(
     entry = result.scalar_one_or_none()
     if not entry:
         raise HTTPException(status_code=404, detail="Journalist not in list")
+    await log_action(
+        session,
+        user_id=_user["id"],
+        action="remove_from_list",
+        entity_type="list",
+        entity_id=str(list_id),
+        details={"journalist_id": str(journalist_id)},
+    )
     await session.delete(entry)
     await session.commit()

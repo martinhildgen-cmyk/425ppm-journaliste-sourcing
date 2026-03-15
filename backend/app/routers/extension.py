@@ -10,8 +10,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
 from app.database import get_session
+from app.models.campaign import Campaign
 from app.models.journalist import Journalist
-from app.models.list import ListJournalist
+from app.models.list import List, ListJournalist
 from app.schemas import (
     ExtensionBulkSubmit,
     ExtensionProfileSubmit,
@@ -20,6 +21,41 @@ from app.schemas import (
 )
 
 router = APIRouter(prefix="/extension", tags=["extension"])
+
+
+async def _add_to_campaign_list(
+    session: AsyncSession,
+    journalist_id: uuid_mod.UUID,
+    campaign_id: str | None,
+    user_id: str,
+):
+    """If a campaignId is provided, add the journalist to the campaign's default list."""
+    if not campaign_id:
+        return
+    campaign_uuid = uuid_mod.UUID(campaign_id)
+    # Find or create a default list for this campaign
+    result = await session.execute(
+        select(List).where(List.campaign_id == campaign_uuid).limit(1)
+    )
+    lst = result.scalar_one_or_none()
+    if not lst:
+        lst = List(
+            name="Extension imports",
+            campaign_id=campaign_uuid,
+            owner_id=uuid_mod.UUID(user_id),
+        )
+        session.add(lst)
+        await session.flush()
+
+    # Add journalist to list (ignore if already there)
+    existing = await session.execute(
+        select(ListJournalist).where(
+            ListJournalist.list_id == lst.id,
+            ListJournalist.journalist_id == journalist_id,
+        )
+    )
+    if not existing.scalar_one_or_none():
+        session.add(ListJournalist(list_id=lst.id, journalist_id=journalist_id))
 
 
 def _parse_name(full_name: str) -> tuple[str, str]:
@@ -102,6 +138,8 @@ async def create_from_profile(
     journalist = await _create_journalist_from_profile(
         body.profile, user["id"], session, body.tags
     )
+    await session.flush()
+    await _add_to_campaign_list(session, journalist.id, body.campaignId, user["id"])
     await session.commit()
     await session.refresh(journalist)
 
@@ -130,6 +168,9 @@ async def create_from_bulk(
         )
         created.append(journalist)
 
+    await session.flush()
+    for j in created:
+        await _add_to_campaign_list(session, j.id, body.campaignId, user["id"])
     await session.commit()
 
     # Refresh and trigger enrichment
@@ -179,6 +220,8 @@ async def create_from_url(
         owner_id=uuid_mod.UUID(user["id"]),
     )
     session.add(journalist)
+    await session.flush()
+    await _add_to_campaign_list(session, journalist.id, body.campaignId, user["id"])
     await session.commit()
     await session.refresh(journalist)
 

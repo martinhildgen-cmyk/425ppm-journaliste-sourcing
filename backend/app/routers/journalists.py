@@ -2,8 +2,10 @@ import uuid as uuid_mod
 from datetime import datetime, timezone
 from uuid import UUID
 
+import os
+
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func, select
+from sqlalchemy import cast, func, select, text, type_coerce
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
@@ -29,6 +31,7 @@ async def list_journalists(
     media_type: str | None = None,
     media_scope: str | None = None,
     sector_macro: str | None = None,
+    tags: str | None = None,
     is_watched: bool | None = None,
     movement_alert: bool | None = None,
     session: AsyncSession = Depends(get_session),
@@ -61,6 +64,13 @@ async def list_journalists(
     if sector_macro:
         query = query.where(Journalist.sector_macro == sector_macro)
         count_query = count_query.where(Journalist.sector_macro == sector_macro)
+    if tags:
+        # Filter by tags_micro — supports comma-separated tags (AND logic)
+        tag_list = [t.strip() for t in tags.split(",") if t.strip()]
+        for tag in tag_list:
+            tag_filter = Journalist.tags_micro.any(tag)
+            query = query.where(tag_filter)
+            count_query = count_query.where(tag_filter)
     if is_watched is not None:
         query = query.where(Journalist.is_watched == is_watched)
         count_query = count_query.where(Journalist.is_watched == is_watched)
@@ -171,6 +181,15 @@ async def update_journalist(
         setattr(journalist, field, value)
 
     journalist.updated_at = datetime.now(timezone.utc)
+
+    await log_action(
+        session,
+        user_id=_user["id"],
+        action="update",
+        entity_type="journalist",
+        entity_id=str(journalist.id),
+        details={"fields": list(update_data.keys())},
+    )
     await session.commit()
     await session.refresh(journalist)
     return journalist

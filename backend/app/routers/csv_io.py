@@ -15,6 +15,7 @@ from app.auth import get_current_user
 from app.database import get_session
 from app.models.journalist import Journalist
 from app.models.list import List
+from app.models.pitch_match import PitchMatch
 
 router = APIRouter(tags=["csv"])
 
@@ -139,6 +140,8 @@ HUBSPOT_HEADERS = [
     "Email",
     "Job Title",
     "Company Name",
+    "Media Type",
+    "Media Scope",
     "LinkedIn",
     "Twitter",
     "City",
@@ -147,18 +150,21 @@ HUBSPOT_HEADERS = [
     "Tags",
     "AI Summary",
     "AI Tonality",
+    "Pitch Advice",
     "Email Status",
     "Source",
 ]
 
 
-def _journalist_to_hubspot_row(j: Journalist) -> dict[str, str]:
+def _journalist_to_hubspot_row(j: Journalist, pitch_advice: str = "") -> dict[str, str]:
     return {
         "First Name": j.first_name or "",
         "Last Name": j.last_name or "",
         "Email": j.email or "",
         "Job Title": j.job_title or "",
         "Company Name": j.media_name or "",
+        "Media Type": j.media_type or "",
+        "Media Scope": j.media_scope or "",
         "LinkedIn": j.linkedin_url or "",
         "Twitter": j.twitter_url or "",
         "City": j.city or "",
@@ -167,6 +173,7 @@ def _journalist_to_hubspot_row(j: Journalist) -> dict[str, str]:
         "Tags": ";".join(j.tags_micro) if j.tags_micro else "",
         "AI Summary": j.ai_summary or "",
         "AI Tonality": j.ai_tonality or "",
+        "Pitch Advice": pitch_advice,
         "Email Status": j.email_status or "",
         "Source": j.source or "",
     }
@@ -181,11 +188,24 @@ async def export_journalists_csv(
     result = await session.execute(select(Journalist).order_by(Journalist.last_name))
     journalists = result.scalars().all()
 
+    # Load latest pitch advice per journalist
+    pitch_map: dict[str, str] = {}
+    for j in journalists:
+        pm_result = await session.execute(
+            select(PitchMatch.pitch_advice)
+            .where(PitchMatch.journalist_id == j.id)
+            .order_by(PitchMatch.created_at.desc())
+            .limit(1)
+        )
+        advice = pm_result.scalar_one_or_none()
+        if advice:
+            pitch_map[str(j.id)] = advice
+
     output = io.StringIO()
     writer = csv.DictWriter(output, fieldnames=HUBSPOT_HEADERS)
     writer.writeheader()
     for j in journalists:
-        writer.writerow(_journalist_to_hubspot_row(j))
+        writer.writerow(_journalist_to_hubspot_row(j, pitch_map.get(str(j.id), "")))
 
     output.seek(0)
     return StreamingResponse(
@@ -209,11 +229,24 @@ async def export_list_csv(
     if not lst:
         raise HTTPException(status_code=404, detail="List not found")
 
+    # Load latest pitch advice per journalist
+    pitch_map: dict[str, str] = {}
+    for j in lst.journalists:
+        pm_result = await session.execute(
+            select(PitchMatch.pitch_advice)
+            .where(PitchMatch.journalist_id == j.id)
+            .order_by(PitchMatch.created_at.desc())
+            .limit(1)
+        )
+        advice = pm_result.scalar_one_or_none()
+        if advice:
+            pitch_map[str(j.id)] = advice
+
     output = io.StringIO()
     writer = csv.DictWriter(output, fieldnames=HUBSPOT_HEADERS)
     writer.writeheader()
     for j in lst.journalists:
-        writer.writerow(_journalist_to_hubspot_row(j))
+        writer.writerow(_journalist_to_hubspot_row(j, pitch_map.get(str(j.id), "")))
 
     output.seek(0)
     return StreamingResponse(
