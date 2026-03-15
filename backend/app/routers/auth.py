@@ -132,7 +132,11 @@ async def google_callback(
         }
     )
     logger.info("User %s logged in successfully", email)
-    return {"access_token": access_token, "token_type": "bearer"}
+
+    # Redirect to frontend with token
+    frontend_url = settings.FRONTEND_URL.rstrip("/")
+    redirect_url = f"{frontend_url}/auth/callback?token={access_token}"
+    return RedirectResponse(redirect_url)
 
 
 @router.get("/me", response_model=UserRead)
