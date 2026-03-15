@@ -137,6 +137,10 @@ export default function JournalistsPage() {
         header: "Email",
         cell: (info) => <EmailStatusBadge status={info.getValue()} />,
       }),
+      columnHelper.accessor("sector_macro", {
+        header: "Secteur",
+        cell: (info) => info.getValue() ?? "—",
+      }),
       columnHelper.accessor("tags_micro", {
         header: "Tags",
         cell: (info) => {
@@ -155,6 +159,18 @@ export default function JournalistsPage() {
                 </Badge>
               )}
             </div>
+          );
+        },
+      }),
+      columnHelper.accessor("ai_summary", {
+        header: "IA",
+        cell: (info) => {
+          const val = info.getValue();
+          if (!val) return <span className="text-muted-foreground text-xs">Non analyse</span>;
+          return (
+            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-[10px]">
+              Analyse
+            </Badge>
           );
         },
       }),

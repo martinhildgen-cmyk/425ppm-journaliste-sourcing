@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
-import type { Journalist, Note } from "@/lib/types";
+import type { Journalist, Note, AIAnalyzeResponse, PitchMatch } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -73,6 +73,16 @@ export default function JournalistDetailPage({
   const [newNote, setNewNote] = useState("");
   const [addingNote, setAddingNote] = useState(false);
 
+  // AI Analysis
+  const [analyzing, setAnalyzing] = useState(false);
+  const [draftAnalysis, setDraftAnalysis] = useState<AIAnalyzeResponse | null>(null);
+
+  // Pitch Matcher
+  const [pitchText, setPitchText] = useState("");
+  const [pitchResult, setPitchResult] = useState<PitchMatch | null>(null);
+  const [pitching, setPitching] = useState(false);
+  const [pitchHistory, setPitchHistory] = useState<PitchMatch[]>([]);
+
   useEffect(() => {
     async function fetchJournalist() {
       try {
@@ -111,9 +121,22 @@ export default function JournalistDetailPage({
       }
     }
 
+    async function fetchPitchHistory() {
+      try {
+        const res = await apiFetch<{ items: PitchMatch[] }>(
+          `/ai/journalists/${id}/pitch-matches?include_drafts=true`,
+          { token: token ?? undefined }
+        );
+        setPitchHistory(res.items);
+      } catch {
+        // ignore
+      }
+    }
+
     fetchJournalist();
     fetchNotes();
     fetchArticles();
+    fetchPitchHistory();
   }, [id, token]);
 
   const handleSave = async () => {
@@ -206,6 +229,58 @@ export default function JournalistDetailPage({
       // error
     } finally {
       setAddingNote(false);
+    }
+  };
+
+  const handleAnalyze = async (isDraft: boolean) => {
+    setAnalyzing(true);
+    setDraftAnalysis(null);
+    try {
+      const result = await apiFetch<AIAnalyzeResponse>(
+        `/ai/journalists/${id}/analyze`,
+        {
+          method: "POST",
+          token: token ?? undefined,
+          body: JSON.stringify({ is_draft: isDraft }),
+        }
+      );
+      if (isDraft) {
+        setDraftAnalysis(result);
+      } else {
+        // Refresh journalist data
+        const j = await apiFetch<Journalist>(`/journalists/${id}`, {
+          token: token ?? undefined,
+        });
+        setJournalist(j);
+        setEditForm(j);
+      }
+    } catch {
+      // error
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  const handlePitchMatch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pitchText.trim()) return;
+    setPitching(true);
+    setPitchResult(null);
+    try {
+      const result = await apiFetch<PitchMatch>(
+        `/ai/journalists/${id}/pitch-match`,
+        {
+          method: "POST",
+          token: token ?? undefined,
+          body: JSON.stringify({ pitch_text: pitchText, is_draft: false }),
+        }
+      );
+      setPitchResult(result);
+      setPitchHistory([result, ...pitchHistory]);
+    } catch {
+      // error
+    } finally {
+      setPitching(false);
     }
   };
 
@@ -529,13 +604,72 @@ export default function JournalistDetailPage({
 
       {/* Intelligence IA */}
       <Card className="border-primary/20 bg-primary/[0.02]">
-        <CardHeader>
-          <CardTitle>Intelligence IA</CardTitle>
-          <CardDescription>
-            Analyse automatique du profil journaliste
-          </CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Intelligence IA</CardTitle>
+            <CardDescription>
+              Analyse automatique du profil journaliste
+            </CardDescription>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleAnalyze(true)}
+              disabled={analyzing}
+            >
+              {analyzing ? "Analyse..." : "Re-analyser (test)"}
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => handleAnalyze(false)}
+              disabled={analyzing}
+            >
+              {analyzing ? "Analyse..." : "Analyser"}
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Draft preview */}
+          {draftAnalysis && (
+            <div className="rounded-md border border-amber-200 bg-amber-50 p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-200">
+                  Mode test
+                </Badge>
+                <span className="text-xs text-muted-foreground">
+                  Ces resultats ne sont pas enregistres
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="ml-auto text-xs"
+                  onClick={() => setDraftAnalysis(null)}
+                >
+                  Fermer
+                </Button>
+              </div>
+              <FieldDisplay label="Resume IA (test)">
+                {draftAnalysis.ai_summary ?? "—"}
+              </FieldDisplay>
+              <FieldDisplay label="Tonalite (test)">
+                {draftAnalysis.ai_tonality ?? "—"}
+              </FieldDisplay>
+              <FieldDisplay label="Secteur (test)">
+                {draftAnalysis.sector_macro ?? "—"}
+              </FieldDisplay>
+              <FieldDisplay label="Tags (test)">
+                {draftAnalysis.tags_micro && draftAnalysis.tags_micro.length > 0 ? (
+                  <div className="flex flex-wrap gap-1">
+                    {draftAnalysis.tags_micro.map((tag) => (
+                      <Badge key={tag} variant="secondary">{tag}</Badge>
+                    ))}
+                  </div>
+                ) : "—"}
+              </FieldDisplay>
+            </div>
+          )}
+
           <FieldDisplay label="Resume IA">
             {journalist.ai_summary ?? "Pas encore analyse"}
           </FieldDisplay>
@@ -668,6 +802,98 @@ export default function JournalistDetailPage({
                       Texte extrait
                     </Badge>
                   )}
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Pitch Matcher */}
+      <Card className="border-blue-200/50 bg-blue-50/30">
+        <CardHeader>
+          <CardTitle>Pitch Matcher</CardTitle>
+          <CardDescription>
+            Evaluez la pertinence d&apos;un pitch pour ce journaliste
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <form onSubmit={handlePitchMatch} className="space-y-3">
+            <textarea
+              className="w-full min-h-[100px] rounded-md border border-input bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground"
+              placeholder="Decrivez votre pitch ici (min. 10 caracteres)..."
+              value={pitchText}
+              onChange={(e) => setPitchText(e.target.value)}
+            />
+            <Button type="submit" disabled={pitching || pitchText.length < 10}>
+              {pitching ? "Analyse en cours..." : "Evaluer le pitch"}
+            </Button>
+          </form>
+
+          {/* Current result */}
+          {pitchResult && (
+            <div className={`rounded-md border p-4 space-y-3 ${
+              pitchResult.verdict === "GO"
+                ? "border-green-200 bg-green-50"
+                : pitchResult.verdict === "NO GO"
+                ? "border-red-200 bg-red-50"
+                : "border-amber-200 bg-amber-50"
+            }`}>
+              <div className="flex items-center gap-3">
+                <Badge
+                  variant={pitchResult.verdict === "GO" ? "default" : "destructive"}
+                  className={pitchResult.verdict === "A RISQUE" ? "bg-amber-500" : ""}
+                >
+                  {pitchResult.verdict}
+                </Badge>
+                <span className="text-2xl font-bold">
+                  {pitchResult.score_match}/100
+                </span>
+              </div>
+              {pitchResult.justification && (
+                <FieldDisplay label="Justification">
+                  {pitchResult.justification}
+                </FieldDisplay>
+              )}
+              {pitchResult.angle_suggere && (
+                <FieldDisplay label="Angle suggere">
+                  {pitchResult.angle_suggere}
+                </FieldDisplay>
+              )}
+              {pitchResult.bad_buzz_risk && pitchResult.risk_details && (
+                <div className="rounded border border-red-300 bg-red-100 p-2 text-sm text-red-800">
+                  Risque bad buzz : {pitchResult.risk_details}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* History */}
+          {pitchHistory.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">
+                Historique ({pitchHistory.length})
+              </p>
+              {pitchHistory.slice(0, 5).map((pm) => (
+                <div
+                  key={pm.id}
+                  className="flex items-center justify-between rounded border p-2 text-sm"
+                >
+                  <span className="truncate max-w-[300px]">
+                    {pm.pitch_subject.slice(0, 60)}...
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      variant={pm.verdict === "GO" ? "default" : "destructive"}
+                      className={`text-[10px] ${pm.verdict === "\u00c0 RISQUE" ? "bg-amber-500" : ""}`}
+                    >
+                      {pm.verdict}
+                    </Badge>
+                    <span className="text-xs font-mono">{pm.score_match}/100</span>
+                    {pm.is_draft && (
+                      <Badge variant="outline" className="text-[10px]">test</Badge>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

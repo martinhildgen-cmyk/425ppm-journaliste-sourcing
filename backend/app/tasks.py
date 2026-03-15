@@ -75,6 +75,12 @@ async def _enrich_journalist_async(task, journalist_id: str):
         await session.commit()
         logger.info("Enrichment complete for journalist %s", journalist_id)
 
+    # Chain AI analysis after enrichment (non-blocking)
+    try:
+        analyze_journalist_ai_task.delay(journalist_id)
+    except Exception as e:
+        logger.warning("Failed to queue AI analysis for %s: %s", journalist_id, e)
+
 
 async def _enrich_email(session: AsyncSession, journalist):
     """Enrich journalist email via Dropcontact with caching."""
@@ -248,3 +254,72 @@ async def _discover_articles_standalone(journalist_id: str):
             return
         await _discover_and_extract_articles(session, journalist)
         await session.commit()
+
+
+@celery_app.task(bind=True, max_retries=2, default_retry_delay=15)
+def analyze_journalist_ai_task(self, journalist_id: str):
+    """Run AI analysis (Profiler + Classifier) on a journalist after enrichment."""
+    logger.info("Starting AI analysis for journalist %s", journalist_id)
+    _run_async(_analyze_journalist_ai(journalist_id))
+
+
+async def _analyze_journalist_ai(journalist_id: str):
+    from app.models.content import Content
+    from app.models.journalist import Journalist
+    from app.services.ai_prompts import run_full_analysis
+
+    async with _session_factory() as session:
+        result = await session.execute(
+            select(Journalist).where(Journalist.id == journalist_id)
+        )
+        journalist = result.scalar_one_or_none()
+        if not journalist:
+            logger.error("Journalist %s not found for AI analysis", journalist_id)
+            return
+
+        # Get articles
+        articles_result = await session.execute(
+            select(Content)
+            .where(Content.journalist_id == journalist.id)
+            .order_by(Content.published_at.desc().nullslast())
+            .limit(5)
+        )
+        articles = articles_result.scalars().all()
+
+        if not articles:
+            logger.info("No articles found for journalist %s, skipping AI analysis", journalist_id)
+            return
+
+        journalist_dict = {
+            "first_name": journalist.first_name or "",
+            "last_name": journalist.last_name or "",
+            "job_title": journalist.job_title or "",
+            "media_name": journalist.media_name or "",
+        }
+        articles_list = [
+            {"title": a.title or "", "text": a.raw_text or ""}
+            for a in articles
+        ]
+
+        ai_result = await run_full_analysis(journalist_dict, articles_list)
+
+        # Persist results
+        if ai_result.get("ai_summary"):
+            journalist.ai_summary = ai_result["ai_summary"]
+        if ai_result.get("ai_tonality"):
+            journalist.ai_tonality = ai_result["ai_tonality"]
+        if ai_result.get("ai_preferred_formats"):
+            journalist.ai_preferred_formats = ai_result["ai_preferred_formats"]
+        if ai_result.get("ai_avoid_topics"):
+            journalist.ai_avoid_topics = ai_result["ai_avoid_topics"]
+        if ai_result.get("sector_macro"):
+            journalist.sector_macro = ai_result["sector_macro"]
+        if ai_result.get("tags_micro"):
+            journalist.tags_micro = ai_result["tags_micro"]
+
+        journalist.ai_last_analyzed_at = datetime.now(timezone.utc)
+        journalist.ai_prompt_version = "v1"
+        journalist.updated_at = datetime.now(timezone.utc)
+
+        await session.commit()
+        logger.info("AI analysis complete for journalist %s", journalist_id)

@@ -78,3 +78,28 @@ export interface Note {
   body: string;
   created_at: string;
 }
+
+export interface AIAnalyzeResponse {
+  ai_summary: string | null;
+  ai_tonality: string | null;
+  ai_preferred_formats: string[] | null;
+  ai_avoid_topics: string | null;
+  sector_macro: string | null;
+  tags_micro: string[] | null;
+  is_draft: boolean;
+}
+
+export interface PitchMatch {
+  id: string;
+  journalist_id: string;
+  pitch_subject: string;
+  score_match: number | null;
+  verdict: string | null;
+  justification: string | null;
+  angle_suggere: string | null;
+  pitch_advice: string | null;
+  bad_buzz_risk: boolean;
+  risk_details: string | null;
+  is_draft: boolean;
+  created_at: string;
+}

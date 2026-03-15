@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Float, ForeignKey, String, Text
+from sqlalchemy import Boolean, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -17,15 +17,23 @@ class PitchMatch(Base):
         default=uuid.uuid4,
     )
     journalist_id: Mapped[uuid.UUID] = mapped_column(
-        PG_UUID(as_uuid=True), ForeignKey("journalists.id"), nullable=False
+        PG_UUID(as_uuid=True), ForeignKey("journalists.id", ondelete="CASCADE"), nullable=False
     )
-    campaign_id: Mapped[uuid.UUID] = mapped_column(
-        PG_UUID(as_uuid=True), ForeignKey("campaigns.id"), nullable=False
+    pitch_subject: Mapped[str] = mapped_column(Text, nullable=False)
+    score_match: Mapped[int | None] = mapped_column(Integer)
+    verdict: Mapped[str | None] = mapped_column(String(20))  # GO | NO GO | À RISQUE
+    justification: Mapped[str | None] = mapped_column(Text)
+    angle_suggere: Mapped[str | None] = mapped_column(Text)
+    pitch_advice: Mapped[str | None] = mapped_column(Text)
+    bad_buzz_risk: Mapped[bool] = mapped_column(Boolean, server_default="false")
+    risk_details: Mapped[str | None] = mapped_column(Text)
+    is_draft: Mapped[bool] = mapped_column(Boolean, server_default="false")  # sandbox mode
+    created_at: Mapped[datetime] = mapped_column(
+        default=lambda: datetime.now(timezone.utc),
+        server_default="now()",
     )
-    score: Mapped[float | None] = mapped_column(Float)
-    rationale: Mapped[str | None] = mapped_column(Text)
-    status: Mapped[str] = mapped_column(String(50), server_default="suggested")
-    created_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
+    created_by: Mapped[uuid.UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
+    )
 
     journalist = relationship("Journalist", backref="pitch_matches", lazy="selectin")
-    campaign = relationship("Campaign", backref="pitch_matches", lazy="selectin")

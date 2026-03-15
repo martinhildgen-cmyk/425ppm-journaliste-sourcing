@@ -231,6 +231,46 @@ async def seed():
         await session.commit()
         print(f"Seeded {len(SEED_JOURNALISTS)} fictional journalists.")
 
+        # Seed prompt versions
+        from app.services.ai_prompts import (
+            PROFILER_SYSTEM_PROMPT,
+            PROFILER_USER_TEMPLATE,
+            CLASSIFIER_SYSTEM_PROMPT,
+            CLASSIFIER_USER_TEMPLATE,
+            MATCHER_SYSTEM_PROMPT,
+            MATCHER_USER_TEMPLATE,
+        )
+
+        prompts = [
+            ("profiler", PROFILER_SYSTEM_PROMPT, PROFILER_USER_TEMPLATE),
+            ("classifier", CLASSIFIER_SYSTEM_PROMPT, CLASSIFIER_USER_TEMPLATE),
+            ("matcher", MATCHER_SYSTEM_PROMPT, MATCHER_USER_TEMPLATE),
+        ]
+
+        for prompt_name, sys_prompt, user_template in prompts:
+            await session.execute(
+                text("""
+                    INSERT INTO prompt_versions (
+                        id, prompt_name, version, system_prompt,
+                        user_prompt_template, is_active, created_at
+                    ) VALUES (
+                        :id, :prompt_name, 1, :system_prompt,
+                        :user_prompt_template, TRUE, :now
+                    )
+                    ON CONFLICT (prompt_name, version) DO NOTHING
+                """),
+                {
+                    "id": str(uuid.uuid4()),
+                    "prompt_name": prompt_name,
+                    "system_prompt": sys_prompt,
+                    "user_prompt_template": user_template,
+                    "now": now,
+                },
+            )
+
+        await session.commit()
+        print("Seeded 3 prompt versions (profiler, classifier, matcher).")
+
     await engine.dispose()
 
 

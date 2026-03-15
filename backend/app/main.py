@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.routers import (
+    ai,
     auth,
     campaigns,
     clients,
@@ -59,3 +60,4 @@ app.include_router(lists.router)
 app.include_router(notes.router)
 app.include_router(csv_io.router)
 app.include_router(enrichment.router)
+app.include_router(ai.router)
