@@ -86,7 +86,12 @@ def upgrade() -> None:
         "clients",
         sa.Column("id", UUID(as_uuid=True), server_default=sa.text("gen_random_uuid()"), primary_key=True),
         sa.Column("name", sa.String(500), nullable=False),
+        sa.Column("sector", sa.String(255)),
+        sa.Column("description", sa.Text()),
+        sa.Column("keywords", sa.JSON()),
+        sa.Column("owner_id", UUID(as_uuid=True), sa.ForeignKey("users.id")),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("NOW()")),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("NOW()")),
     )
 
     # Campaigns
@@ -95,7 +100,11 @@ def upgrade() -> None:
         sa.Column("id", UUID(as_uuid=True), server_default=sa.text("gen_random_uuid()"), primary_key=True),
         sa.Column("client_id", UUID(as_uuid=True), sa.ForeignKey("clients.id", ondelete="CASCADE")),
         sa.Column("name", sa.String(500), nullable=False),
+        sa.Column("description", sa.Text()),
+        sa.Column("status", sa.String(50), server_default="draft"),
+        sa.Column("owner_id", UUID(as_uuid=True), sa.ForeignKey("users.id")),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("NOW()")),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("NOW()")),
     )
 
     # Lists
@@ -104,7 +113,9 @@ def upgrade() -> None:
         sa.Column("id", UUID(as_uuid=True), server_default=sa.text("gen_random_uuid()"), primary_key=True),
         sa.Column("campaign_id", UUID(as_uuid=True), sa.ForeignKey("campaigns.id", ondelete="CASCADE")),
         sa.Column("name", sa.String(500), nullable=False),
+        sa.Column("owner_id", UUID(as_uuid=True), sa.ForeignKey("users.id")),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("NOW()")),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("NOW()")),
     )
 
     # List ↔ Journalists (N:N)
@@ -122,7 +133,7 @@ def upgrade() -> None:
         sa.Column("id", UUID(as_uuid=True), server_default=sa.text("gen_random_uuid()"), primary_key=True),
         sa.Column("journalist_id", UUID(as_uuid=True), sa.ForeignKey("journalists.id", ondelete="CASCADE")),
         sa.Column("author_id", UUID(as_uuid=True), sa.ForeignKey("users.id")),
-        sa.Column("content", sa.Text(), nullable=False),
+        sa.Column("body", sa.Text(), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("NOW()")),
     )
 
@@ -160,7 +171,7 @@ def upgrade() -> None:
     # Audit log
     op.create_table(
         "audit_log",
-        sa.Column("id", sa.BigInteger(), autoincrement=True, primary_key=True),
+        sa.Column("id", UUID(as_uuid=True), server_default=sa.text("gen_random_uuid()"), primary_key=True),
         sa.Column("user_id", UUID(as_uuid=True), sa.ForeignKey("users.id")),
         sa.Column("action", sa.String(100), nullable=False),
         sa.Column("entity_type", sa.String(100)),
