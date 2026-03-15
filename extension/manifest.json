@@ -1,0 +1,37 @@
+{
+  "manifest_version": 3,
+  "name": "425PPM — LinkedIn Sourcing",
+  "version": "0.1.0",
+  "description": "Outil de sourcing journalistes depuis LinkedIn pour 425PPM",
+  "permissions": ["activeTab", "storage", "sidePanel"],
+  "host_permissions": ["https://www.linkedin.com/*"],
+  "action": {
+    "default_title": "425PPM Sourcing",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.linkedin.com/*"],
+      "js": ["content.js"],
+      "css": ["content.css"]
+    }
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
