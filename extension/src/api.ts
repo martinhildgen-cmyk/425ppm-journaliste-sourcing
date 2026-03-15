@@ -2,13 +2,12 @@
  * API client for communicating with the 425PPM backend.
  */
 
-import type { ExtractedData } from "./types.js";
+import type { ExtractedData, BulkExtractedData, ClientOption, CampaignOption } from "./types.js";
 
-const DEFAULT_API_URL = "http://localhost:3000";
+const DEFAULT_API_URL = "http://localhost:8000";
 
 /**
  * Retrieve the API base URL from chrome.storage.sync.
- * Falls back to localhost when no URL is configured.
  */
 export async function getApiUrl(): Promise<string> {
   return new Promise((resolve) => {
@@ -44,25 +43,128 @@ async function buildHeaders(): Promise<Record<string, string>> {
 }
 
 /**
- * Send an extracted profile to the 425PPM backend.
+ * Send a single captured profile to the backend.
  */
-export async function sendProfile(data: ExtractedData): Promise<void> {
+export async function sendProfile(data: ExtractedData): Promise<{ id: string }> {
   const apiUrl = await getApiUrl();
   const headers = await buildHeaders();
 
-  const response = await fetch(
-    `${apiUrl}/api/journalists/from-extension`,
-    {
-      method: "POST",
-      headers,
-      body: JSON.stringify(data),
-    },
-  );
+  const response = await fetch(`${apiUrl}/extension/journalists/from-profile`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      profile: data.profile,
+      extractedAt: data.extractedAt,
+      clientId: data.clientId ?? null,
+      campaignId: data.campaignId ?? null,
+      tags: data.tags ?? [],
+    }),
+  });
 
   if (!response.ok) {
-    throw new Error(
-      `API error: ${response.status} ${response.statusText}`,
+    const text = await response.text();
+    throw new Error(`API error ${response.status}: ${text}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Send multiple profiles from bulk capture.
+ */
+export async function sendBulkProfiles(
+  data: BulkExtractedData,
+): Promise<{ created: number; journalist_ids: string[] }> {
+  const apiUrl = await getApiUrl();
+  const headers = await buildHeaders();
+
+  const response = await fetch(`${apiUrl}/extension/journalists/from-bulk`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`API error ${response.status}: ${text}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Degraded mode — send only a LinkedIn URL for backend enrichment.
+ */
+export async function sendUrlImport(
+  linkedinUrl: string,
+  clientId?: string,
+  campaignId?: string,
+  tags?: string[],
+): Promise<{ id: string }> {
+  const apiUrl = await getApiUrl();
+  const headers = await buildHeaders();
+
+  const response = await fetch(`${apiUrl}/extension/journalists/from-url`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      linkedin_url: linkedinUrl,
+      clientId: clientId ?? null,
+      campaignId: campaignId ?? null,
+      tags: tags ?? [],
+    }),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`API error ${response.status}: ${text}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Fetch clients from the backend for the selector dropdown.
+ */
+export async function fetchClients(): Promise<ClientOption[]> {
+  const apiUrl = await getApiUrl();
+  const headers = await buildHeaders();
+
+  try {
+    const response = await fetch(`${apiUrl}/clients/`, { headers });
+    if (!response.ok) return [];
+    const data = await response.json();
+    return (data.items ?? data).map((c: { id: string; name: string }) => ({
+      id: c.id,
+      name: c.name,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Fetch campaigns for a client.
+ */
+export async function fetchCampaigns(clientId: string): Promise<CampaignOption[]> {
+  const apiUrl = await getApiUrl();
+  const headers = await buildHeaders();
+
+  try {
+    const response = await fetch(`${apiUrl}/campaigns/?client_id=${clientId}`, {
+      headers,
+    });
+    if (!response.ok) return [];
+    const data = await response.json();
+    return (data.items ?? data).map(
+      (c: { id: string; name: string; client_id: string }) => ({
+        id: c.id,
+        name: c.name,
+        client_id: c.client_id,
+      }),
     );
+  } catch {
+    return [];
   }
 }
 

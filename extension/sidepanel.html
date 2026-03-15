@@ -9,6 +9,8 @@
       --green: #22c55e;
       --red: #ef4444;
       --gray: #6b7280;
+      --blue: #3b82f6;
+      --orange: #f59e0b;
       --bg: #f9fafb;
       --card: #ffffff;
       --text: #111827;
@@ -26,6 +28,14 @@
       font-size: 18px;
       font-weight: 700;
       margin-bottom: 16px;
+    }
+    h2 {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--gray);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
     .card {
       background: var(--card);
@@ -60,25 +70,121 @@
       font-size: 20px;
       color: var(--text);
     }
-    button#captureBtn {
+
+    /* Selector alert */
+    .selector-alert {
+      display: none;
+      background: #fef3c7;
+      border: 1px solid var(--orange);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 12px;
+      color: #92400e;
+      margin-bottom: 12px;
+    }
+
+    /* Client / Campaign / Tags */
+    .form-group {
+      margin-bottom: 10px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--gray);
+      margin-bottom: 4px;
+    }
+    .form-group select,
+    .form-group input {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 13px;
+      background: var(--card);
+    }
+
+    /* Buttons */
+    .btn {
       width: 100%;
       padding: 10px 16px;
-      background: var(--green);
-      color: #fff;
       border: none;
       border-radius: 8px;
       font-size: 14px;
       font-weight: 600;
       cursor: pointer;
-      margin-bottom: 12px;
+      margin-bottom: 8px;
     }
-    button#captureBtn:hover {
-      opacity: 0.9;
-    }
-    button#captureBtn:disabled {
-      background: var(--gray);
+    .btn:disabled {
+      opacity: 0.5;
       cursor: not-allowed;
     }
+    .btn-primary {
+      background: var(--green);
+      color: #fff;
+    }
+    .btn-primary:hover:not(:disabled) { opacity: 0.9; }
+    .btn-secondary {
+      background: var(--blue);
+      color: #fff;
+    }
+    .btn-secondary:hover:not(:disabled) { opacity: 0.9; }
+    .btn-outline {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-outline:hover:not(:disabled) { background: var(--bg); }
+
+    /* Bulk section */
+    .bulk-section {
+      display: none;
+    }
+    .bulk-actions {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .bulk-actions .btn {
+      flex: 1;
+      margin-bottom: 0;
+      font-size: 12px;
+      padding: 8px 10px;
+    }
+    .bulk-count {
+      font-size: 12px;
+      color: var(--gray);
+      text-align: center;
+    }
+    .bulk-count strong {
+      color: var(--text);
+    }
+
+    /* Feedback */
+    .feedback {
+      display: none;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      margin-bottom: 12px;
+    }
+    .feedback.success {
+      background: #dcfce7;
+      color: #166534;
+      border: 1px solid #86efac;
+    }
+    .feedback.error {
+      background: #fef2f2;
+      color: #991b1b;
+      border: 1px solid #fca5a5;
+    }
+    .feedback.info {
+      background: #dbeafe;
+      color: #1e40af;
+      border: 1px solid #93c5fd;
+    }
+
+    /* Settings */
     .settings label {
       display: block;
       font-size: 12px;
@@ -103,16 +209,28 @@
       border-radius: 6px;
       cursor: pointer;
     }
+
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 16px 0;
+    }
   </style>
 </head>
 <body>
   <h1>425PPM Sourcing</h1>
 
+  <!-- Feedback -->
+  <div class="feedback" id="feedback"></div>
+
+  <!-- Selector alert -->
+  <div class="selector-alert" id="selectorAlert"></div>
+
   <!-- Connection status -->
   <div class="card">
     <div class="status">
       <div class="status-dot" id="statusDot"></div>
-      <span id="statusText">Disconnected</span>
+      <span id="statusText">Deconnecte</span>
     </div>
   </div>
 
@@ -130,13 +248,54 @@
     </div>
   </div>
 
-  <!-- Capture button -->
-  <button id="captureBtn">Capturer ce profil</button>
+  <!-- Client / Campaign / Tags -->
+  <div class="card">
+    <div class="form-group">
+      <label for="clientSelect">Client</label>
+      <select id="clientSelect">
+        <option value="">— Aucun client —</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="campaignSelect">Campagne</label>
+      <select id="campaignSelect" style="display: none;">
+        <option value="">— Aucune campagne —</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="tagsInput">Tags (separees par des virgules)</label>
+      <input type="text" id="tagsInput" placeholder="tech, startup, IA" />
+    </div>
+  </div>
+
+  <!-- Single capture button -->
+  <button class="btn btn-primary" id="captureBtn">Capturer ce profil</button>
+
+  <!-- URL Import (degraded mode) -->
+  <button class="btn btn-outline" id="urlImportBtn">Importer par URL (mode degrade)</button>
+
+  <!-- Bulk section (search pages only) -->
+  <div class="bulk-section" id="bulkSection">
+    <div class="divider"></div>
+    <h2>Capture en masse</h2>
+    <div class="card">
+      <div class="bulk-actions">
+        <button class="btn btn-secondary" id="injectCheckboxesBtn">Afficher checkboxes</button>
+        <button class="btn btn-primary" id="captureBulkBtn">Capturer la selection</button>
+      </div>
+      <div class="bulk-count">
+        <strong id="bulkSelectedCount">0</strong> profil(s) selectionne(s)
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
 
   <!-- Settings -->
   <div class="card settings">
+    <h2>Parametres</h2>
     <label for="apiUrlInput">API URL</label>
-    <input type="url" id="apiUrlInput" placeholder="http://localhost:3000" />
+    <input type="url" id="apiUrlInput" placeholder="http://localhost:8000" />
     <label for="authTokenInput">Auth Token</label>
     <input type="password" id="authTokenInput" placeholder="Bearer token" />
     <button id="saveSettingsBtn">Enregistrer</button>

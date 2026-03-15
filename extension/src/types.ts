@@ -29,4 +29,31 @@ export interface RateLimiterState {
 export interface ExtractedData {
   profile: LinkedInProfile;
   extractedAt: string;
+  clientId?: string;
+  campaignId?: string;
+  tags?: string[];
+}
+
+export interface BulkExtractedData {
+  profiles: LinkedInProfile[];
+  clientId?: string;
+  campaignId?: string;
+  tags?: string[];
+}
+
+export interface SelectorCheckResult {
+  selector: string;
+  name: string;
+  found: boolean;
+}
+
+export interface ClientOption {
+  id: string;
+  name: string;
+}
+
+export interface CampaignOption {
+  id: string;
+  name: string;
+  client_id: string;
 }
