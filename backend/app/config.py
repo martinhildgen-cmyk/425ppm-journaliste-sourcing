@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def fix_database_url(self) -> "Settings":
         """Railway provides postgresql:// but asyncpg needs postgresql+asyncpg://."""
+        self.DATABASE_URL = self.DATABASE_URL.strip()
         if self.DATABASE_URL.startswith("postgresql://"):
             self.DATABASE_URL = self.DATABASE_URL.replace(
                 "postgresql://", "postgresql+asyncpg://", 1
