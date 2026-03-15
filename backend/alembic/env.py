@@ -52,7 +52,22 @@ async def run_async_migrations() -> None:
 
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode."""
-    asyncio.run(run_async_migrations())
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+
+    if loop and loop.is_running():
+        # Already inside an async event loop (e.g. uvicorn lifespan) —
+        # run migrations synchronously in a separate thread to avoid
+        # "cannot call asyncio.run() from a running event loop".
+        import concurrent.futures
+
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future = executor.submit(asyncio.run, run_async_migrations())
+            future.result()
+    else:
+        asyncio.run(run_async_migrations())
 
 
 if context.is_offline_mode():
