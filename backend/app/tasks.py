@@ -6,13 +6,16 @@ Tasks:
     - enrich_email: Dropcontact email lookup
     - discover_articles: Brave Search article discovery
     - extract_article: Trafilatura text extraction
+    - check_job_changes: Weekly cron — detect job/media changes via Brave Search
+    - refresh_articles: Daily cron — refresh articles for most-accessed journalists
+    - purge_inactive: Monthly cron — RGPD purge of inactive journalists
 """
 
 import asyncio
 import logging
 from datetime import datetime, timezone
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.config import settings
@@ -323,3 +326,203 @@ async def _analyze_journalist_ai(journalist_id: str):
 
         await session.commit()
         logger.info("AI analysis complete for journalist %s", journalist_id)
+
+
+# ---------------------------------------------------------------------------
+# Phase 5 — Cron tasks
+# ---------------------------------------------------------------------------
+
+
+@celery_app.task(bind=True, max_retries=1, default_retry_delay=60)
+def check_job_changes(self):
+    """Weekly cron — check for job/media changes via Brave Search.
+
+    For each watched journalist, search Brave for their LinkedIn snippet
+    and compare the current job title with what's stored in the database.
+    If different, flag movement_alert and store previous values.
+    """
+    logger.info("Starting weekly job change check")
+    _run_async(_check_job_changes_async())
+
+
+async def _check_job_changes_async():
+    from app.models.journalist import Journalist
+    from app.services.brave_search import BraveSearchService
+    from app.services.circuit_breaker import CircuitBreakerOpen, brave_search_breaker
+
+    if not settings.BRAVE_SEARCH_API_KEY:
+        logger.warning("Brave Search API key not configured, skipping job change check")
+        return
+
+    async with _session_factory() as session:
+        # Get watched journalists, ordered by last checked (oldest first)
+        result = await session.execute(
+            select(Journalist)
+            .where(Journalist.is_watched == True)  # noqa: E712
+            .order_by(Journalist.job_last_checked_at.asc().nullsfirst())
+            .limit(50)  # Check up to 50 per run (rotation)
+        )
+        journalists = result.scalars().all()
+
+        if not journalists:
+            logger.info("No watched journalists to check")
+            return
+
+        search_service = BraveSearchService(settings.BRAVE_SEARCH_API_KEY)
+        changes_detected = 0
+
+        for journalist in journalists:
+            if not journalist.first_name or not journalist.last_name:
+                continue
+
+            query = f"{journalist.first_name} {journalist.last_name} site:linkedin.com/in"
+
+            try:
+                async with brave_search_breaker:
+                    results = await search_service.search_articles(query, count=1)
+            except CircuitBreakerOpen:
+                logger.warning("Brave Search circuit breaker open, stopping job check")
+                break
+            except Exception as e:
+                logger.warning("Brave Search error for %s: %s", journalist.id, e)
+                continue
+
+            journalist.job_last_checked_at = datetime.now(timezone.utc)
+
+            if not results:
+                continue
+
+            # The Brave Search snippet for LinkedIn profiles typically contains
+            # the job title and company, e.g. "Journaliste chez Le Monde"
+            snippet = (results[0].title or "") + " " + (results[0].description or "")
+            snippet_lower = snippet.lower()
+
+            # Detect change: if current job_title or media_name doesn't appear in snippet
+            current_job = (journalist.job_title or "").lower()
+            current_media = (journalist.media_name or "").lower()
+
+            job_found = not current_job or current_job in snippet_lower
+            media_found = not current_media or current_media in snippet_lower
+
+            if not job_found or not media_found:
+                # Possible change detected
+                if not journalist.movement_alert:
+                    journalist.job_title_previous = journalist.job_title
+                    journalist.media_name_previous = journalist.media_name
+                    journalist.movement_alert = True
+                    journalist.job_last_updated_at = datetime.now(timezone.utc)
+                    changes_detected += 1
+                    logger.info(
+                        "Job change detected for %s %s (id=%s)",
+                        journalist.first_name,
+                        journalist.last_name,
+                        journalist.id,
+                    )
+
+        await session.commit()
+        logger.info(
+            "Job change check complete: %d journalists checked, %d changes detected",
+            len(journalists),
+            changes_detected,
+        )
+
+        # Re-trigger AI analysis for journalists with movement alerts
+        for journalist in journalists:
+            if journalist.movement_alert:
+                try:
+                    analyze_journalist_ai_task.delay(str(journalist.id))
+                except Exception:
+                    pass
+
+
+@celery_app.task(bind=True, max_retries=1, default_retry_delay=60)
+def refresh_articles(self):
+    """Daily cron — refresh articles for the most-accessed journalists.
+
+    Picks the top 20 most recently accessed journalists and re-discovers
+    their articles to keep the database fresh.
+    """
+    logger.info("Starting daily article refresh")
+    _run_async(_refresh_articles_async())
+
+
+async def _refresh_articles_async():
+    from app.models.journalist import Journalist
+    from app.services.cache import cache_delete
+
+    async with _session_factory() as session:
+        # Get top 20 most recently accessed journalists
+        result = await session.execute(
+            select(Journalist)
+            .where(Journalist.first_name.isnot(None))
+            .where(Journalist.last_name.isnot(None))
+            .order_by(Journalist.last_accessed_at.desc().nullslast())
+            .limit(20)
+        )
+        journalists = result.scalars().all()
+
+        if not journalists:
+            logger.info("No journalists to refresh articles for")
+            return
+
+        refreshed = 0
+        for journalist in journalists:
+            # Clear article cache to force re-discovery
+            try:
+                await cache_delete(f"articles:{journalist.id}")
+            except Exception:
+                pass
+
+            try:
+                await _discover_and_extract_articles(session, journalist)
+                refreshed += 1
+            except Exception as e:
+                logger.warning("Article refresh failed for %s: %s", journalist.id, e)
+
+        await session.commit()
+        logger.info("Article refresh complete: %d/%d journalists refreshed", refreshed, len(journalists))
+
+
+@celery_app.task(bind=True, max_retries=0)
+def purge_inactive(self):
+    """Monthly cron — RGPD purge of journalists not accessed in 12+ months.
+
+    Deletes journalist records (and cascading content, notes, etc.) that
+    have not been accessed in over 12 months. This implements the RGPD
+    data minimization principle.
+    """
+    logger.info("Starting monthly RGPD purge")
+    _run_async(_purge_inactive_async())
+
+
+async def _purge_inactive_async():
+    from datetime import timedelta
+
+    from sqlalchemy import delete
+
+    from app.models.journalist import Journalist
+
+    cutoff = datetime.now(timezone.utc) - timedelta(days=365)
+
+    async with _session_factory() as session:
+        # Count first for logging
+        count_result = await session.execute(
+            select(func.count())
+            .select_from(Journalist)
+            .where(Journalist.last_accessed_at < cutoff)
+            .where(Journalist.is_watched == False)  # noqa: E712
+        )
+        count = count_result.scalar_one()
+
+        if count == 0:
+            logger.info("No inactive journalists to purge")
+            return
+
+        # Delete inactive journalists (cascade deletes content, notes, etc.)
+        await session.execute(
+            delete(Journalist)
+            .where(Journalist.last_accessed_at < cutoff)
+            .where(Journalist.is_watched == False)  # noqa: E712
+        )
+        await session.commit()
+        logger.info("RGPD purge complete: %d inactive journalists deleted", count)

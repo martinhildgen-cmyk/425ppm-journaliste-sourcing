@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
 import type { Journalist, JournalistListResponse } from "@/lib/types";
@@ -51,16 +52,26 @@ function EmailStatusBadge({ status }: { status: string }) {
 }
 
 export default function JournalistsPage() {
+  return (
+    <Suspense fallback={<div className="p-8">Chargement...</div>}>
+      <JournalistsPageContent />
+    </Suspense>
+  );
+}
+
+function JournalistsPageContent() {
   const { token } = useAuth();
+  const searchParams = useSearchParams();
   const [data, setData] = useState<Journalist[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [pageSize] = useState(20);
-  const [search, setSearch] = useState("");
-  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState(searchParams.get("search") ?? "");
+  const [searchInput, setSearchInput] = useState(searchParams.get("search") ?? "");
   const [mediaType, setMediaType] = useState("");
   const [mediaScope, setMediaScope] = useState("");
   const [sectorMacro, setSectorMacro] = useState("");
+  const [movementAlertFilter] = useState(searchParams.get("movement_alert") === "true");
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
 
@@ -89,6 +100,7 @@ export default function JournalistsPage() {
         if (mediaType) params.set("media_type", mediaType);
         if (mediaScope) params.set("media_scope", mediaScope);
         if (sectorMacro) params.set("sector_macro", sectorMacro);
+        if (movementAlertFilter) params.set("movement_alert", "true");
 
         const res = await apiFetch<JournalistListResponse>(
           `/journalists/?${params.toString()}`,
@@ -103,7 +115,7 @@ export default function JournalistsPage() {
       }
     }
     fetchData();
-  }, [token, page, pageSize, search, mediaType, mediaScope, sectorMacro]);
+  }, [token, page, pageSize, search, mediaType, mediaScope, sectorMacro, movementAlertFilter]);
 
   const totalPages = Math.ceil(total / pageSize);
 

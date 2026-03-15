@@ -13,6 +13,7 @@ from app.routers import (
     campaigns,
     clients,
     csv_io,
+    dashboard,
     enrichment,
     extension,
     health,
@@ -63,3 +64,4 @@ app.include_router(csv_io.router)
 app.include_router(enrichment.router)
 app.include_router(ai.router)
 app.include_router(extension.router)
+app.include_router(dashboard.router)

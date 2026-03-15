@@ -1,4 +1,5 @@
 from celery import Celery
+from celery.schedules import crontab
 
 from app.config import settings
 
@@ -18,18 +19,17 @@ celery_app.conf.update(
     task_acks_late=True,
     worker_prefetch_multiplier=1,
     beat_schedule={
-        # Phase 5 — cron jobs will be configured here
-        # "check-job-changes": {
-        #     "task": "app.tasks.check_job_changes",
-        #     "schedule": crontab(hour=3, minute=0, day_of_week=0),  # Sunday 3am
-        # },
-        # "refresh-articles": {
-        #     "task": "app.tasks.refresh_articles",
-        #     "schedule": crontab(hour=4, minute=0),  # Daily 4am
-        # },
-        # "purge-inactive": {
-        #     "task": "app.tasks.purge_inactive",
-        #     "schedule": crontab(hour=2, minute=0, day_of_month=1),  # Monthly
-        # },
+        "check-job-changes": {
+            "task": "app.tasks.check_job_changes",
+            "schedule": crontab(hour=3, minute=0, day_of_week=0),  # Sunday 3am
+        },
+        "refresh-articles": {
+            "task": "app.tasks.refresh_articles",
+            "schedule": crontab(hour=4, minute=0),  # Daily 4am
+        },
+        "purge-inactive": {
+            "task": "app.tasks.purge_inactive",
+            "schedule": crontab(hour=2, minute=0, day_of_month=1),  # 1st of month 2am
+        },
     },
 )
