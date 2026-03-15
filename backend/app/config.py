@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     DROPCONTACT_API_KEY: str = ""
     BRAVE_SEARCH_API_KEY: str = ""
 
+    ENVIRONMENT: str = "development"
+
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
 

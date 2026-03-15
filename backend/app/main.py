@@ -25,7 +25,7 @@ if settings.SENTRY_DSN:
     sentry_sdk.init(
         dsn=settings.SENTRY_DSN,
         traces_sample_rate=0.2,
-        environment="staging",
+        environment=settings.ENVIRONMENT,
     )
 
 
