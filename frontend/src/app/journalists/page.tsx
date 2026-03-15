@@ -87,6 +87,7 @@ function JournalistsPageContent() {
     sector_macro: "",
   });
   const [creating, setCreating] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     async function fetchData() {
@@ -115,7 +116,7 @@ function JournalistsPageContent() {
       }
     }
     fetchData();
-  }, [token, page, pageSize, search, mediaType, mediaScope, sectorMacro, movementAlertFilter]);
+  }, [token, page, pageSize, search, mediaType, mediaScope, sectorMacro, movementAlertFilter, refreshKey]);
 
   const totalPages = Math.ceil(total / pageSize);
 
@@ -243,6 +244,7 @@ function JournalistsPageContent() {
         sector_macro: "",
       });
       // Refresh
+      setRefreshKey((k) => k + 1);
       setPage(1);
       setSearch("");
       setSearchInput("");

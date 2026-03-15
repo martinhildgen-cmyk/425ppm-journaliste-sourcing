@@ -77,6 +77,9 @@ export default function JournalistDetailPage({
   const [analyzing, setAnalyzing] = useState(false);
   const [draftAnalysis, setDraftAnalysis] = useState<AIAnalyzeResponse | null>(null);
 
+  // Error messages
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
   // Pitch Matcher
   const [pitchText, setPitchText] = useState("");
   const [pitchResult, setPitchResult] = useState<PitchMatch | null>(null);
@@ -186,29 +189,31 @@ export default function JournalistDetailPage({
 
   const handleEnrich = async () => {
     setEnriching(true);
+    setErrorMsg(null);
     try {
-      await apiFetch(`/enrichment/journalists/${id}`, {
-        method: "POST",
+      const result = await apiFetch<{ status: string; articles_found: number; errors: string[] }>(
+        `/enrichment/journalists/${id}`,
+        {
+          method: "POST",
+          token: token ?? undefined,
+        }
+      );
+      // Refresh data
+      const j = await apiFetch<Journalist>(`/journalists/${id}`, {
         token: token ?? undefined,
       });
-      // Poll for updates after a delay
-      setTimeout(async () => {
-        try {
-          const j = await apiFetch<Journalist>(`/journalists/${id}`, {
-            token: token ?? undefined,
-          });
-          setJournalist(j);
-          const a = await apiFetch<typeof articles>(
-            `/enrichment/journalists/${id}/articles`,
-            { token: token ?? undefined }
-          );
-          setArticles(a);
-        } catch {
-          // ignore
-        }
-        setEnriching(false);
-      }, 5000);
-    } catch {
+      setJournalist(j);
+      const a = await apiFetch<typeof articles>(
+        `/enrichment/journalists/${id}/articles`,
+        { token: token ?? undefined }
+      );
+      setArticles(a);
+      if (result.articles_found === 0 && result.errors.length > 0) {
+        setErrorMsg(`Enrichissement: ${result.errors.join(", ")}`);
+      }
+    } catch (e) {
+      setErrorMsg("Erreur lors de l'enrichissement. Verifiez les logs.");
+    } finally {
       setEnriching(false);
     }
   };
@@ -235,6 +240,7 @@ export default function JournalistDetailPage({
   const handleAnalyze = async (isDraft: boolean) => {
     setAnalyzing(true);
     setDraftAnalysis(null);
+    setErrorMsg(null);
     try {
       const result = await apiFetch<AIAnalyzeResponse>(
         `/ai/journalists/${id}/analyze`,
@@ -254,8 +260,8 @@ export default function JournalistDetailPage({
         setJournalist(j);
         setEditForm(j);
       }
-    } catch {
-      // error
+    } catch (e) {
+      setErrorMsg("Erreur lors de l'analyse IA. Verifiez la cle API LLM.");
     } finally {
       setAnalyzing(false);
     }
@@ -396,6 +402,19 @@ export default function JournalistDetailPage({
           )}
         </div>
       </div>
+
+      {/* Error message */}
+      {errorMsg && (
+        <div className="rounded-md border border-red-200 bg-red-50 p-3">
+          <p className="text-sm text-red-800">{errorMsg}</p>
+          <button
+            className="text-xs text-red-600 underline mt-1"
+            onClick={() => setErrorMsg(null)}
+          >
+            Fermer
+          </button>
+        </div>
+      )}
 
       {/* Movement alert */}
       {journalist.movement_alert && (

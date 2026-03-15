@@ -43,6 +43,7 @@ class JournalistCreate(BaseModel):
     media_name: str | None = None
     media_type: str | None = None
     media_scope: str | None = None
+    sector_macro: str | None = None
     source: str | None = "manual"
 
 
