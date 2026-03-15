@@ -29,24 +29,9 @@ if settings.SENTRY_DSN:
     )
 
 
-def run_migrations() -> None:
-    """Run Alembic migrations on startup."""
-    from alembic import command
-    from alembic.config import Config
-
-    alembic_cfg = Config("alembic.ini")
-    try:
-        command.upgrade(alembic_cfg, "head")
-        logger.info("Database migrations applied successfully")
-    except Exception:
-        logger.exception("Failed to run migrations")
-        raise
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     logger.info("425PPM Journaliste Sourcing API starting up")
-    run_migrations()
     yield
     logger.info("425PPM Journaliste Sourcing API shutting down")
 
