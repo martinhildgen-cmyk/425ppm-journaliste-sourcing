@@ -88,13 +88,25 @@ async def create_journalist(
     session: AsyncSession = Depends(get_session),
     user: dict = Depends(get_current_user),
 ):
-    """Create a new journalist."""
+    """Create a new journalist. Triggers background enrichment if possible."""
     journalist = Journalist(
         **data.model_dump(exclude_unset=True), owner_id=uuid_mod.UUID(user["id"])
     )
     session.add(journalist)
     await session.commit()
     await session.refresh(journalist)
+
+    # Trigger background enrichment (non-blocking, fails silently)
+    import os
+
+    if not os.environ.get("TESTING"):
+        try:
+            from app.tasks import enrich_journalist
+
+            enrich_journalist.delay(str(journalist.id))
+        except Exception:
+            pass  # Celery not available — skip silently
+
     return journalist
 
 
