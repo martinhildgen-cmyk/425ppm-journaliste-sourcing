@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 
-export default function AuthCallbackPage() {
+function CallbackHandler() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { setToken } = useAuth();
@@ -19,9 +19,15 @@ export default function AuthCallbackPage() {
     }
   }, [searchParams, setToken, router]);
 
+  return <p className="text-muted-foreground">Connexion en cours...</p>;
+}
+
+export default function AuthCallbackPage() {
   return (
     <main className="flex min-h-screen items-center justify-center">
-      <p className="text-muted-foreground">Connexion en cours...</p>
+      <Suspense fallback={<p className="text-muted-foreground">Chargement...</p>}>
+        <CallbackHandler />
+      </Suspense>
     </main>
   );
 }
