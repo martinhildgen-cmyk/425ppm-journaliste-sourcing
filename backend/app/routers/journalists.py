@@ -15,6 +15,7 @@ from app.schemas import (
     JournalistRead,
     JournalistUpdate,
 )
+from app.services.audit import log_action
 
 router = APIRouter(prefix="/journalists", tags=["journalists"])
 
@@ -95,6 +96,16 @@ async def create_journalist(
     session.add(journalist)
     await session.commit()
     await session.refresh(journalist)
+
+    await log_action(
+        session,
+        user_id=user["id"],
+        action="create",
+        entity_type="journalist",
+        entity_id=str(journalist.id),
+        details={"first_name": journalist.first_name, "last_name": journalist.last_name},
+    )
+    await session.commit()
 
     # Trigger background enrichment (non-blocking, fails silently)
     import os
@@ -179,5 +190,13 @@ async def delete_journalist(
     if not journalist:
         raise HTTPException(status_code=404, detail="Journalist not found")
 
+    await log_action(
+        session,
+        user_id=_user["id"],
+        action="delete",
+        entity_type="journalist",
+        entity_id=str(journalist.id),
+        details={"first_name": journalist.first_name, "last_name": journalist.last_name},
+    )
     await session.delete(journalist)
     await session.commit()

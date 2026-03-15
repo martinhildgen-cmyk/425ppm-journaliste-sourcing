@@ -110,6 +110,45 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Onboarding banner — shown when base is empty */}
+      {!loading && (stats?.total_journalists ?? 0) === 0 && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardHeader>
+            <CardTitle>Bienvenue sur 425PPM Sourcing</CardTitle>
+            <CardDescription>
+              Commencez a construire votre base journalistes en 3 etapes
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ol className="list-decimal list-inside space-y-2 text-sm">
+              <li>
+                <strong>Importez vos contacts</strong> — Utilisez{" "}
+                <Link href="/import" className="text-primary underline">
+                  l&apos;import CSV
+                </Link>{" "}
+                pour charger votre base existante
+              </li>
+              <li>
+                <strong>Installez l&apos;extension Chrome</strong> — Capturez des
+                profils directement depuis LinkedIn
+              </li>
+              <li>
+                <strong>Enrichissez automatiquement</strong> — L&apos;IA analyse
+                les profils et trouve les articles recents
+              </li>
+            </ol>
+            <div className="flex gap-2 mt-4">
+              <Button asChild size="sm">
+                <Link href="/import">Importer un CSV</Link>
+              </Button>
+              <Button asChild size="sm" variant="outline">
+                <Link href="/journalists">Creer manuellement</Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Global search bar */}
       <form onSubmit={handleSearch} className="flex gap-2 max-w-lg">
         <Input
