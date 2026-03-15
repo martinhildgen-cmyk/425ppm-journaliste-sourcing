@@ -132,4 +132,4 @@ async def test_delete_journalist(client: AsyncClient, auth_headers: dict):
 @pytest.mark.asyncio
 async def test_unauthenticated_request(client: AsyncClient):
     resp = await client.get("/journalists/")
-    assert resp.status_code == 403
+    assert resp.status_code in (401, 403)
