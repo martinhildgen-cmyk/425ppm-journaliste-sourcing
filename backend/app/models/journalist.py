@@ -1,8 +1,8 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, ForeignKey, String, Text, text
-from sqlalchemy.dialects.postgresql import ARRAY, UUID as PG_UUID
+from sqlalchemy import JSON, Boolean, ForeignKey, String, Text, text
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -14,7 +14,7 @@ class Journalist(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         PG_UUID(as_uuid=True),
         primary_key=True,
-        server_default=text("gen_random_uuid()"),
+        default=uuid.uuid4,
     )
     first_name: Mapped[str | None] = mapped_column(String(255))
     last_name: Mapped[str | None] = mapped_column(String(255))
@@ -31,10 +31,10 @@ class Journalist(Base):
     media_scope: Mapped[str | None] = mapped_column(String(100))
     ai_summary: Mapped[str | None] = mapped_column(Text)
     ai_tonality: Mapped[str | None] = mapped_column(String(100))
-    ai_preferred_formats: Mapped[list[str] | None] = mapped_column(ARRAY(Text))
+    ai_preferred_formats: Mapped[list[str] | None] = mapped_column(JSON)
     ai_avoid_topics: Mapped[str | None] = mapped_column(Text)
     sector_macro: Mapped[str | None] = mapped_column(String(100))
-    tags_micro: Mapped[list[str] | None] = mapped_column(ARRAY(Text))
+    tags_micro: Mapped[list[str] | None] = mapped_column(JSON)
     ai_last_analyzed_at: Mapped[datetime | None] = mapped_column()
     ai_prompt_version: Mapped[str | None] = mapped_column(String(20))
     job_title_previous: Mapped[str | None] = mapped_column(String(500))
@@ -47,8 +47,8 @@ class Journalist(Base):
     owner_id: Mapped[uuid.UUID | None] = mapped_column(
         PG_UUID(as_uuid=True), ForeignKey("users.id")
     )
-    created_at: Mapped[datetime] = mapped_column(server_default=text("NOW()"))
-    updated_at: Mapped[datetime] = mapped_column(server_default=text("NOW()"))
-    last_accessed_at: Mapped[datetime] = mapped_column(server_default=text("NOW()"))
+    created_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
+    updated_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
+    last_accessed_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
 
     owner = relationship("User", backref="journalists", lazy="selectin")

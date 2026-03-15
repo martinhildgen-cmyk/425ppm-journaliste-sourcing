@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import auth, campaigns, clients, health, journalists, lists
+from app.routers import auth, campaigns, clients, health, journalists, lists, notes
 
 logger = logging.getLogger(__name__)
 
@@ -46,3 +46,4 @@ app.include_router(journalists.router)
 app.include_router(clients.router)
 app.include_router(campaigns.router)
 app.include_router(lists.router)
+app.include_router(notes.router)
