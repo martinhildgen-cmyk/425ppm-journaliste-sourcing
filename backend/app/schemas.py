@@ -201,3 +201,66 @@ class NoteRead(BaseModel):
     author_id: UUID
     body: str
     created_at: datetime
+
+
+# ── AI / Pitch Matching ────────────────────────────────────────────────────
+
+
+class AIAnalyzeRequest(BaseModel):
+    """Request to trigger AI analysis on a journalist."""
+    is_draft: bool = False  # sandbox mode — don't persist results
+    provider: str | None = None  # override LLM provider
+    model: str | None = None  # override LLM model
+
+
+class AIAnalyzeResponse(BaseModel):
+    ai_summary: str | None = None
+    ai_tonality: str | None = None
+    ai_preferred_formats: list[str] | None = None
+    ai_avoid_topics: str | None = None
+    sector_macro: str | None = None
+    tags_micro: list[str] | None = None
+    is_draft: bool = False
+
+
+class PitchMatchRequest(BaseModel):
+    pitch_text: str = Field(min_length=10, max_length=5000)
+    is_draft: bool = False  # sandbox mode
+    provider: str | None = None
+    model: str | None = None
+
+
+class PitchMatchResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: UUID
+    journalist_id: UUID
+    pitch_subject: str
+    score_match: int | None = None
+    verdict: str | None = None
+    justification: str | None = None
+    angle_suggere: str | None = None
+    pitch_advice: str | None = None
+    bad_buzz_risk: bool = False
+    risk_details: str | None = None
+    is_draft: bool = False
+    created_at: datetime
+
+
+class PitchMatchListResponse(BaseModel):
+    items: list[PitchMatchResponse]
+
+
+# ── Prompt Version ─────────────────────────────────────────────────────────
+
+
+class PromptVersionRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: UUID
+    prompt_name: str
+    version: int
+    system_prompt: str
+    user_prompt_template: str
+    llm_provider: str | None = None
+    llm_model: str | None = None
+    is_active: bool = False
+    created_at: datetime
