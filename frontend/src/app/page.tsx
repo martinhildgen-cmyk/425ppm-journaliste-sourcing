@@ -10,10 +10,10 @@ export default function Home() {
         Plateforme de gestion des contacts presse et médias
       </p>
       <Link
-        href="/dashboard"
+        href="/login"
         className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-10 items-center justify-center rounded-md px-8 text-sm font-medium transition-colors"
       >
-        Accéder au Dashboard
+        Se connecter
       </Link>
     </main>
   );
