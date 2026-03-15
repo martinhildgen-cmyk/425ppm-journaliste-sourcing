@@ -1,0 +1,27 @@
+/*
+ * 425PPM LinkedIn Sourcing — Content script styles.
+ * Minimal CSS for injected elements on LinkedIn pages.
+ */
+
+/* Green checkmark badge shown on captured profiles */
+.ppm-captured-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: #22c55e;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  margin-left: 8px;
+  vertical-align: middle;
+  pointer-events: none;
+  user-select: none;
+}
+
+.ppm-captured-badge::after {
+  content: "\2713"; /* Unicode check mark */
+}

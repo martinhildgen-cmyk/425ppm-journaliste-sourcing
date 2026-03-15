@@ -1,0 +1,16 @@
+{
+  "name": "425ppm-extension",
+  "version": "0.1.0",
+  "private": true,
+  "description": "425PPM LinkedIn journalist sourcing Chrome extension",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "lint": "eslint src/"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "@types/chrome": "^0.0.268",
+    "eslint": "^9.0.0"
+  }
+}
