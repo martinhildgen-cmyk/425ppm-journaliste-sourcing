@@ -14,6 +14,7 @@ from app.routers import (
     clients,
     csv_io,
     enrichment,
+    extension,
     health,
     journalists,
     lists,
@@ -61,3 +62,4 @@ app.include_router(notes.router)
 app.include_router(csv_io.router)
 app.include_router(enrichment.router)
 app.include_router(ai.router)
+app.include_router(extension.router)

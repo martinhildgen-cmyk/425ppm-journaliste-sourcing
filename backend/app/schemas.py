@@ -264,3 +264,45 @@ class PromptVersionRead(BaseModel):
     llm_model: str | None = None
     is_active: bool = False
     created_at: datetime
+
+
+# ── Extension ──────────────────────────────────────────────────────────────
+
+
+class ExtensionExperience(BaseModel):
+    title: str = ""
+    company: str = ""
+    dateRange: str = ""
+    location: str = ""
+
+
+class ExtensionProfile(BaseModel):
+    name: str
+    headline: str = ""
+    location: str = ""
+    about: str = ""
+    currentCompany: str = ""
+    linkedinUrl: str = ""
+    experiences: list[ExtensionExperience] = []
+
+
+class ExtensionProfileSubmit(BaseModel):
+    profile: ExtensionProfile
+    extractedAt: str = ""
+    clientId: str | None = None
+    campaignId: str | None = None
+    tags: list[str] = []
+
+
+class ExtensionBulkSubmit(BaseModel):
+    profiles: list[ExtensionProfile]
+    clientId: str | None = None
+    campaignId: str | None = None
+    tags: list[str] = []
+
+
+class ExtensionUrlImport(BaseModel):
+    linkedin_url: str
+    clientId: str | None = None
+    campaignId: str | None = None
+    tags: list[str] = []
