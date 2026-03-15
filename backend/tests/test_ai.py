@@ -36,22 +36,22 @@ async def journalist_with_articles(db_session: AsyncSession, test_user_id: str):
             journalist_id=journalist.id,
             title="La transition energetique en France",
             url="https://lemonde.fr/article1",
-            source_type="article",
-            raw_text="La France accelere sa transition vers les energies renouvelables. Le gouvernement a annonce un plan ambitieux pour doubler la capacite solaire d'ici 2030.",
+            content_type="article",
+            body_text="La France accelere sa transition vers les energies renouvelables. Le gouvernement a annonce un plan ambitieux pour doubler la capacite solaire d'ici 2030.",
         ),
         Content(
             journalist_id=journalist.id,
             title="Biodiversite : alerte sur les oceans",
             url="https://lemonde.fr/article2",
-            source_type="article",
-            raw_text="Un rapport de l'ONU alerte sur la degradation rapide de la biodiversite marine. Les scientifiques appellent a une action immediate.",
+            content_type="article",
+            body_text="Un rapport de l'ONU alerte sur la degradation rapide de la biodiversite marine. Les scientifiques appellent a une action immediate.",
         ),
         Content(
             journalist_id=journalist.id,
             title="COP31 : les enjeux pour la France",
             url="https://lemonde.fr/article3",
-            source_type="article",
-            raw_text="La prochaine COP31 sera cruciale pour les engagements climatiques de la France. Le pays devra presenter un bilan de ses actions depuis l'Accord de Paris.",
+            content_type="article",
+            body_text="La prochaine COP31 sera cruciale pour les engagements climatiques de la France. Le pays devra presenter un bilan de ses actions depuis l'Accord de Paris.",
         ),
     ]
     for a in articles:

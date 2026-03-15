@@ -109,9 +109,9 @@ async def get_journalist_articles(
             "id": str(a.id),
             "title": a.title,
             "url": a.url,
-            "source_type": a.source_type,
+            "content_type": a.content_type,
             "published_at": a.published_at.isoformat() if a.published_at else None,
-            "has_text": bool(a.raw_text),
+            "has_text": bool(a.body_text),
         }
         for a in articles
     ]
