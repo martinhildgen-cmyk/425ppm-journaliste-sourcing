@@ -191,42 +191,30 @@ async def seed():
             print(f"Database already has {count} journalists. Skipping seed.")
             return
 
+        from app.models.journalist import Journalist
+
         now = datetime.now(timezone.utc)
         for j in SEED_JOURNALISTS:
-            tags = "{" + ",".join(f'"{t}"' for t in j["tags_micro"]) + "}"
-            await session.execute(
-                text("""
-                    INSERT INTO journalists (
-                        id, first_name, last_name, job_title, email, email_status,
-                        linkedin_url, city, country, media_name, media_type,
-                        media_scope, sector_macro, tags_micro, source,
-                        created_at, updated_at, last_accessed_at
-                    ) VALUES (
-                        :id, :first_name, :last_name, :job_title, :email, :email_status,
-                        :linkedin_url, :city, :country, :media_name, :media_type,
-                        :media_scope, :sector_macro, :tags_micro::text[], :source,
-                        :now, :now, :now
-                    )
-                """),
-                {
-                    "id": str(uuid.uuid4()),
-                    "first_name": j["first_name"],
-                    "last_name": j["last_name"],
-                    "job_title": j["job_title"],
-                    "email": j["email"],
-                    "email_status": j["email_status"],
-                    "linkedin_url": j["linkedin_url"],
-                    "city": j["city"],
-                    "country": j["country"],
-                    "media_name": j["media_name"],
-                    "media_type": j["media_type"],
-                    "media_scope": j["media_scope"],
-                    "sector_macro": j["sector_macro"],
-                    "tags_micro": tags,
-                    "source": j["source"],
-                    "now": now,
-                },
+            journalist = Journalist(
+                first_name=j["first_name"],
+                last_name=j["last_name"],
+                job_title=j["job_title"],
+                email=j["email"],
+                email_status=j["email_status"],
+                linkedin_url=j["linkedin_url"],
+                city=j["city"],
+                country=j["country"],
+                media_name=j["media_name"],
+                media_type=j["media_type"],
+                media_scope=j["media_scope"],
+                sector_macro=j["sector_macro"],
+                tags_micro=j["tags_micro"],
+                source=j["source"],
+                created_at=now,
+                updated_at=now,
+                last_accessed_at=now,
             )
+            session.add(journalist)
 
         await session.commit()
         print(f"Seeded {len(SEED_JOURNALISTS)} fictional journalists.")
