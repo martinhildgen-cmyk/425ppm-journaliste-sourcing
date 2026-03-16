@@ -416,22 +416,12 @@ export default function JournalistDetailPage({
         </div>
       )}
 
-      {/* Bad Buzz alert */}
-      {journalist.bad_buzz_risk && (
-        <div className="rounded-md border border-red-300 bg-red-100 p-4 flex items-center gap-3">
-          <Badge variant="destructive" className="bg-red-600">Bad Buzz</Badge>
-          <p className="text-sm font-medium text-red-900">
-            Ce journaliste presente un risque de bad buzz. Verifiez son historique avant tout pitch.
-          </p>
-        </div>
-      )}
-
       {/* Movement alert */}
       {journalist.movement_alert && (
-        <div className="rounded-md border border-amber-300 bg-amber-50 p-4 flex items-center gap-3">
-          <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300">Mouvement</Badge>
-          <p className="text-sm text-amber-900">
-            Changement de poste recent detecte.
+        <div className="rounded-md border border-red-200 bg-red-50 p-4 flex items-center gap-3">
+          <Badge variant="destructive">Changement detecte</Badge>
+          <p className="text-sm text-red-800">
+            Ce journaliste a change de poste ou de media.
             {journalist.job_title_previous && (
               <> Ancien poste : {journalist.job_title_previous}.</>
             )}
@@ -491,6 +481,14 @@ export default function JournalistDetailPage({
                     }
                   />
                 </Field>
+                <Field label="Twitter">
+                  <Input
+                    value={editForm.twitter_url ?? ""}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, twitter_url: e.target.value })
+                    }
+                  />
+                </Field>
                 <Field label="Ville">
                   <Input
                     value={editForm.city ?? ""}
@@ -528,6 +526,20 @@ export default function JournalistDetailPage({
                       className="text-primary hover:underline"
                     >
                       {journalist.linkedin_url}
+                    </a>
+                  ) : (
+                    "—"
+                  )}
+                </FieldDisplay>
+                <FieldDisplay label="Twitter">
+                  {journalist.twitter_url ? (
+                    <a
+                      href={journalist.twitter_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline"
+                    >
+                      {journalist.twitter_url}
                     </a>
                   ) : (
                     "—"
