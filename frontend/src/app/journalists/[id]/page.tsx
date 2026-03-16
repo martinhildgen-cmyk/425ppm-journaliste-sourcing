@@ -184,8 +184,10 @@ export default function JournalistDetailPage({
         token: token ?? undefined,
       });
       router.push("/journalists");
-    } catch {
-      // error
+    } catch (e) {
+      setErrorMsg(
+        e instanceof Error ? e.message : "Erreur lors de la suppression"
+      );
     }
   };
 
@@ -199,8 +201,10 @@ export default function JournalistDetailPage({
       });
       setJournalist(updated);
       setEditForm(updated);
-    } catch {
-      // error
+    } catch (e) {
+      setErrorMsg(
+        e instanceof Error ? e.message : "Erreur lors du suivi"
+      );
     }
   };
 
@@ -247,8 +251,10 @@ export default function JournalistDetailPage({
       });
       setNotes([note, ...notes]);
       setNewNote("");
-    } catch {
-      // error
+    } catch (e) {
+      setErrorMsg(
+        e instanceof Error ? e.message : "Erreur lors de l'ajout de la note"
+      );
     } finally {
       setAddingNote(false);
     }
@@ -300,8 +306,10 @@ export default function JournalistDetailPage({
       );
       setPitchResult(result);
       setPitchHistory([result, ...pitchHistory]);
-    } catch {
-      // error
+    } catch (e) {
+      setErrorMsg(
+        e instanceof Error ? e.message : "Erreur lors du pitch match"
+      );
     } finally {
       setPitching(false);
     }
@@ -314,8 +322,10 @@ export default function JournalistDetailPage({
         token: token ?? undefined,
       });
       setNotes(notes.filter((n) => n.id !== noteId));
-    } catch {
-      // error
+    } catch (e) {
+      setErrorMsg(
+        e instanceof Error ? e.message : "Erreur lors de la suppression de la note"
+      );
     }
   };
 
