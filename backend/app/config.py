@@ -16,6 +16,7 @@ class Settings(BaseSettings):
 
     FRONTEND_URL: str = "http://localhost:3000"
     CORS_ORIGINS: list[str] = ["http://localhost:3000"]
+    CORS_ALLOW_ALL: bool = False
 
     SENTRY_DSN: str = ""
 

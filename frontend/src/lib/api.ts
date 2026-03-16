@@ -11,9 +11,10 @@ export async function apiFetch<T>(
 ): Promise<T> {
   const { token, headers, ...rest } = options;
 
+  const url = `${BASE_URL}${path}`;
   let res: Response;
   try {
-    res = await fetch(`${BASE_URL}${path}`, {
+    res = await fetch(url, {
       headers: {
         "Content-Type": "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -21,10 +22,12 @@ export async function apiFetch<T>(
       },
       ...rest,
     });
-  } catch {
+  } catch (err) {
     // Network error — server unreachable, CORS blocked, etc.
+    const method = (options.method ?? "GET").toUpperCase();
+    console.error(`[425PPM] ${method} ${url} failed:`, err);
     throw new Error(
-      "Impossible de contacter le serveur. Verifiez que l'API est accessible."
+      `Impossible de contacter le serveur (${method} ${path}). Verifiez que l'API est accessible a ${BASE_URL}.`
     );
   }
 
