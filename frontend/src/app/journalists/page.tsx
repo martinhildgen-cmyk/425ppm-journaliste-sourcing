@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -59,6 +60,8 @@ export default function JournalistsPage() {
   );
 }
 
+type AddMode = "none" | "linkedin" | "manual";
+
 function JournalistsPageContent() {
   const { token } = useAuth();
   const searchParams = useSearchParams();
@@ -73,9 +76,15 @@ function JournalistsPageContent() {
   const [sectorMacro, setSectorMacro] = useState("");
   const [movementAlertFilter] = useState(searchParams.get("movement_alert") === "true");
   const [loading, setLoading] = useState(true);
-  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [addMode, setAddMode] = useState<AddMode>("none");
 
-  // Create form state
+  // LinkedIn URL form
+  const [linkedinUrl, setLinkedinUrl] = useState("");
+  const [linkedinLoading, setLinkedinLoading] = useState(false);
+  const [linkedinError, setLinkedinError] = useState<string | null>(null);
+  const [linkedinSuccess, setLinkedinSuccess] = useState<string | null>(null);
+
+  // Manual create form
   const [createForm, setCreateForm] = useState({
     first_name: "",
     last_name: "",
@@ -224,6 +233,36 @@ function JournalistsPageContent() {
     setPage(1);
   };
 
+  const handleLinkedInAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!linkedinUrl.trim()) return;
+    if (!linkedinUrl.includes("linkedin.com")) {
+      setLinkedinError("Collez un lien LinkedIn valide (ex: https://www.linkedin.com/in/nom-journaliste)");
+      return;
+    }
+    setLinkedinLoading(true);
+    setLinkedinError(null);
+    setLinkedinSuccess(null);
+    try {
+      const journalist = await apiFetch<Journalist>("/extension/journalists/from-url", {
+        method: "POST",
+        token: token ?? undefined,
+        body: JSON.stringify({ linkedin_url: linkedinUrl }),
+      });
+      const name = [journalist.first_name, journalist.last_name].filter(Boolean).join(" ") || "Journaliste";
+      setLinkedinSuccess(`${name} ajoute ! L'IA va enrichir le profil automatiquement.`);
+      setLinkedinUrl("");
+      setRefreshKey((k) => k + 1);
+      setPage(1);
+    } catch (err) {
+      setLinkedinError(
+        err instanceof Error ? err.message : "Erreur lors de l'ajout."
+      );
+    } finally {
+      setLinkedinLoading(false);
+    }
+  };
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreating(true);
@@ -234,7 +273,7 @@ function JournalistsPageContent() {
         token: token ?? undefined,
         body: JSON.stringify(createForm),
       });
-      setShowCreateForm(false);
+      setAddMode("none");
       setCreateForm({
         first_name: "",
         last_name: "",
@@ -245,7 +284,6 @@ function JournalistsPageContent() {
         media_scope: "",
         sector_macro: "",
       });
-      // Refresh
       setRefreshKey((k) => k + 1);
       setPage(1);
       setSearch("");
@@ -268,16 +306,73 @@ function JournalistsPageContent() {
             {total} contacts dans la base
           </p>
         </div>
-        <Button onClick={() => setShowCreateForm(!showCreateForm)}>
-          {showCreateForm ? "Annuler" : "Creer un journaliste"}
-        </Button>
+        <div className="flex gap-2">
+          {addMode === "none" ? (
+            <>
+              <Button onClick={() => setAddMode("linkedin")}>
+                + Ajouter depuis LinkedIn
+              </Button>
+              <Button variant="outline" onClick={() => setAddMode("manual")}>
+                Saisie manuelle
+              </Button>
+            </>
+          ) : (
+            <Button variant="outline" onClick={() => { setAddMode("none"); setLinkedinError(null); setLinkedinSuccess(null); setCreateError(null); }}>
+              Annuler
+            </Button>
+          )}
+        </div>
       </div>
 
-      {/* Create form */}
-      {showCreateForm && (
+      {/* LinkedIn URL add — primary action */}
+      {addMode === "linkedin" && (
+        <Card className="border-primary/30">
+          <CardHeader>
+            <CardTitle>Ajouter depuis LinkedIn</CardTitle>
+            <CardDescription>
+              Collez le lien du profil LinkedIn d&apos;un journaliste. L&apos;IA analysera automatiquement son profil, ses sujets de predilection et ses articles recents.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleLinkedInAdd} className="space-y-3">
+              {linkedinError && (
+                <div className="rounded-md border border-red-200 bg-red-50 p-3">
+                  <p className="text-sm text-red-800">{linkedinError}</p>
+                </div>
+              )}
+              {linkedinSuccess && (
+                <div className="rounded-md border border-green-200 bg-green-50 p-3">
+                  <p className="text-sm text-green-800">{linkedinSuccess}</p>
+                </div>
+              )}
+              <div className="flex gap-3">
+                <Input
+                  placeholder="https://www.linkedin.com/in/nom-journaliste"
+                  value={linkedinUrl}
+                  onChange={(e) => setLinkedinUrl(e.target.value)}
+                  className="flex-1"
+                  type="url"
+                />
+                <Button type="submit" disabled={linkedinLoading}>
+                  {linkedinLoading ? "Ajout..." : "Ajouter"}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Vous pouvez aussi utiliser l&apos;extension Chrome pour capturer les profils directement depuis LinkedIn.
+              </p>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Manual create form — secondary action */}
+      {addMode === "manual" && (
         <Card>
           <CardHeader>
-            <CardTitle>Nouveau journaliste</CardTitle>
+            <CardTitle>Saisie manuelle</CardTitle>
+            <CardDescription>
+              Ajoutez un journaliste en remplissant les informations manuellement.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleCreate} className="grid grid-cols-2 gap-4">
