@@ -24,6 +24,7 @@ export interface Journalist {
   job_title_previous: string | null;
   media_name_previous: string | null;
   movement_alert: boolean;
+  bad_buzz_risk: boolean;
   is_watched: boolean;
   source: string | null;
   owner_id: string | null;

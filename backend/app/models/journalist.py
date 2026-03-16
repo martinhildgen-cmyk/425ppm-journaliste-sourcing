@@ -49,6 +49,7 @@ class Journalist(Base):
     job_last_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     job_last_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     movement_alert: Mapped[bool] = mapped_column(Boolean, server_default=text("FALSE"))
+    bad_buzz_risk: Mapped[bool] = mapped_column(Boolean, server_default=text("FALSE"))
     is_watched: Mapped[bool] = mapped_column(Boolean, server_default=text("FALSE"))
     source: Mapped[str | None] = mapped_column(String(100))
     owner_id: Mapped[uuid.UUID | None] = mapped_column(

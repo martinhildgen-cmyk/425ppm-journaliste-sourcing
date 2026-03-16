@@ -90,6 +90,7 @@ class JournalistRead(BaseModel):
     job_title_previous: str | None = None
     media_name_previous: str | None = None
     movement_alert: bool = False
+    bad_buzz_risk: bool = False
     is_watched: bool = False
     source: str | None = None
     owner_id: UUID | None = None
