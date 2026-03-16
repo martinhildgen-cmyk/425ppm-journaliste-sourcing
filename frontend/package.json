@@ -10,25 +10,25 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "next": "^15",
-    "react": "^19",
-    "react-dom": "^19",
     "@radix-ui/react-slot": "^1.1.1",
     "@tanstack/react-table": "^8.21.2",
-    "lucide-react": "^0.469.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "tailwind-merge": "^2.6.0",
-    "next-themes": "^0.4.4"
+    "lucide-react": "^0.469.0",
+    "next": "^15",
+    "next-themes": "^0.4.4",
+    "react": "^19",
+    "react-dom": "^19",
+    "tailwind-merge": "^2.6.0"
   },
   "devDependencies": {
-    "typescript": "^5.7.3",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@types/node": "^22",
-    "tailwindcss": "^4",
-    "@tailwindcss/postcss": "^4",
     "eslint": "^9",
-    "eslint-config-next": "^15"
+    "eslint-config-next": "^15",
+    "tailwindcss": "^4",
+    "typescript": "5.9.3"
   }
 }
