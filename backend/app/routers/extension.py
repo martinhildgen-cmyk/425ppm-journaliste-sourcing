@@ -1,6 +1,7 @@
 """Extension Router — endpoints for the Chrome extension to submit profiles."""
 
 import os
+import re
 import uuid as uuid_mod
 from datetime import datetime, timezone
 
@@ -76,6 +77,32 @@ def _extract_job_and_media(headline: str) -> tuple[str, str]:
             parts = headline.split(sep, 1)
             return parts[0].strip(), parts[1].strip()
     return headline.strip(), ""
+
+
+def _extract_name_from_linkedin_url(url: str) -> tuple[str, str]:
+    """Extract a probable first/last name from a LinkedIn profile URL slug.
+
+    Examples:
+        /in/julie-moreau-123abc → ("Julie", "Moreau")
+        /in/jean-pierre-dupont  → ("Jean-Pierre", "Dupont")
+        /in/some-slug           → ("Some", "Slug")
+    Returns ("", "") if extraction fails.
+    """
+    match = re.search(r"linkedin\.com/in/([^/?#]+)", url)
+    if not match:
+        return "", ""
+    slug = match.group(1).rstrip("/")
+    # Remove trailing hex/numeric ID suffixes (e.g. "-1a2b3c4d", "-123456789")
+    slug = re.sub(r"-[0-9a-f]{6,}$", "", slug)
+    slug = re.sub(r"-\d{3,}$", "", slug)
+    parts = slug.split("-")
+    if len(parts) < 2:
+        return parts[0].capitalize(), ""
+    # Heuristic: first part = first name, rest = last name
+    # Handle compound first names (jean-pierre → keep hyphen)
+    first_name = parts[0].capitalize()
+    last_name = " ".join(p.capitalize() for p in parts[1:])
+    return first_name, last_name
 
 
 async def _create_journalist_from_profile(
@@ -213,7 +240,12 @@ async def create_from_url(
     if existing:
         return existing
 
+    # Extract name from LinkedIn URL slug for initial data
+    first_name, last_name = _extract_name_from_linkedin_url(body.linkedin_url)
+
     journalist = Journalist(
+        first_name=first_name or None,
+        last_name=last_name or None,
         linkedin_url=body.linkedin_url,
         source="chrome_extension",
         tags_micro=body.tags if body.tags else None,
