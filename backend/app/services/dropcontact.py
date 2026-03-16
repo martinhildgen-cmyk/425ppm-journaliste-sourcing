@@ -30,6 +30,10 @@ class DropcontactResult:
     email_status: str | None
     linkedin_url: str | None
     phone: str | None
+    first_name: str | None = None
+    last_name: str | None = None
+    company: str | None = None
+    job_title: str | None = None
 
 
 class DropcontactService:
@@ -40,28 +44,39 @@ class DropcontactService:
 
     async def enrich(
         self,
-        first_name: str,
-        last_name: str,
-        company: str,
+        first_name: str = "",
+        last_name: str = "",
+        company: str = "",
+        linkedin_url: str | None = None,
     ) -> DropcontactResult:
         """Enrich a contact and return available data.
 
         Submits a batch request, then polls until the result is ready
         (every 5 s, up to 60 s max).  Returns a result with ``None``
         fields for anything not found.
+
+        The Dropcontact API accepts a ``linkedin`` field to resolve
+        contacts from their LinkedIn profile URL.
         """
         headers = {
             "X-Access-Token": self.api_key,
             "Content-Type": "application/json",
         }
+        contact_data: dict = {}
+        if first_name:
+            contact_data["first_name"] = first_name
+        if last_name:
+            contact_data["last_name"] = last_name
+        if company:
+            contact_data["company"] = company
+        if linkedin_url:
+            contact_data["linkedin"] = linkedin_url
+
+        if not contact_data:
+            return self._empty_result()
+
         payload = {
-            "data": [
-                {
-                    "first_name": first_name,
-                    "last_name": last_name,
-                    "company": company,
-                }
-            ],
+            "data": [contact_data],
             "siren": False,
             "language": "fr",
         }
@@ -136,6 +151,10 @@ class DropcontactService:
             email_status=contact.get("qualification"),
             linkedin_url=contact.get("linkedin"),
             phone=contact.get("phone"),
+            first_name=contact.get("first_name"),
+            last_name=contact.get("last_name"),
+            company=contact.get("company"),
+            job_title=contact.get("job"),
         )
 
     @staticmethod

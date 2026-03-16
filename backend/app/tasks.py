@@ -61,8 +61,10 @@ async def _enrich_journalist_async(task, journalist_id: str):
             logger.error("Journalist %s not found", journalist_id)
             return
 
-        # Step 1: Email enrichment
-        if journalist.email_status == "manquant" and journalist.first_name and journalist.last_name:
+        # Step 1: Email enrichment (also resolves name/company from LinkedIn URL)
+        has_name = journalist.first_name and journalist.last_name
+        has_linkedin = bool(journalist.linkedin_url)
+        if journalist.email_status == "manquant" and (has_name or has_linkedin):
             try:
                 await _enrich_email(session, journalist)
             except Exception as e:
@@ -86,12 +88,16 @@ async def _enrich_journalist_async(task, journalist_id: str):
 
 
 async def _enrich_email(session: AsyncSession, journalist):
-    """Enrich journalist email via Dropcontact with caching."""
+    """Enrich journalist email via Dropcontact with caching.
+
+    Also resolves name, company and job title when Dropcontact returns them
+    (useful for URL-only imports).
+    """
     from app.services.cache import cache_get, cache_set
     from app.services.circuit_breaker import CircuitBreakerOpen, dropcontact_breaker
     from app.services.dropcontact import DropcontactService
 
-    cache_key = f"dropcontact:{journalist.first_name}:{journalist.last_name}:{journalist.media_name}"
+    cache_key = f"dropcontact:{journalist.first_name}:{journalist.last_name}:{journalist.media_name}:{journalist.linkedin_url}"
     cached = await cache_get(cache_key)
 
     if cached:
@@ -106,9 +112,10 @@ async def _enrich_email(session: AsyncSession, journalist):
         async with dropcontact_breaker:
             service = DropcontactService(settings.DROPCONTACT_API_KEY)
             result = await service.enrich(
-                first_name=journalist.first_name,
-                last_name=journalist.last_name,
+                first_name=journalist.first_name or "",
+                last_name=journalist.last_name or "",
                 company=journalist.media_name or "",
+                linkedin_url=journalist.linkedin_url or None,
             )
     except CircuitBreakerOpen:
         logger.warning("Dropcontact circuit breaker is open, skipping")
@@ -120,19 +127,36 @@ async def _enrich_email(session: AsyncSession, journalist):
             "email_status": result.email_status,
             "linkedin_url": result.linkedin_url,
             "phone": result.phone,
+            "first_name": result.first_name,
+            "last_name": result.last_name,
+            "company": result.company,
+            "job_title": result.job_title,
         }
         await cache_set(cache_key, result_dict)
         _apply_dropcontact_result(journalist, result_dict)
 
 
 def _apply_dropcontact_result(journalist, data: dict):
-    """Apply Dropcontact result to journalist model."""
+    """Apply Dropcontact result to journalist model.
+
+    Fills in missing fields (name, company, job) when available —
+    particularly useful for URL-only imports.
+    """
     if data.get("email"):
         journalist.email = data["email"]
     if data.get("email_status"):
         journalist.email_status = data["email_status"]
     if data.get("linkedin_url") and not journalist.linkedin_url:
         journalist.linkedin_url = data["linkedin_url"]
+    # Fill in name/company/job if currently empty (URL-only imports)
+    if data.get("first_name") and not journalist.first_name:
+        journalist.first_name = data["first_name"]
+    if data.get("last_name") and not journalist.last_name:
+        journalist.last_name = data["last_name"]
+    if data.get("company") and not journalist.media_name:
+        journalist.media_name = data["company"]
+    if data.get("job_title") and not journalist.job_title:
+        journalist.job_title = data["job_title"]
 
 
 async def _discover_and_extract_articles(session: AsyncSession, journalist):
