@@ -36,8 +36,6 @@ class JournalistCreate(BaseModel):
     job_title: str | None = None
     email: str | None = None
     linkedin_url: str | None = None
-    twitter_url: str | None = None
-    bluesky_url: str | None = None
     city: str | None = None
     country: str | None = None
     media_name: str | None = None
@@ -53,8 +51,6 @@ class JournalistUpdate(BaseModel):
     job_title: str | None = None
     email: str | None = None
     linkedin_url: str | None = None
-    twitter_url: str | None = None
-    bluesky_url: str | None = None
     city: str | None = None
     country: str | None = None
     media_name: str | None = None
@@ -72,8 +68,6 @@ class JournalistRead(BaseModel):
     email: str | None = None
     email_status: str = "manquant"
     linkedin_url: str | None = None
-    twitter_url: str | None = None
-    bluesky_url: str | None = None
     city: str | None = None
     country: str | None = None
     media_name: str | None = None
@@ -90,6 +84,7 @@ class JournalistRead(BaseModel):
     job_title_previous: str | None = None
     media_name_previous: str | None = None
     movement_alert: bool = False
+    bad_buzz_risk: bool = False
     is_watched: bool = False
     source: str | None = None
     owner_id: UUID | None = None

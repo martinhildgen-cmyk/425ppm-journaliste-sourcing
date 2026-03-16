@@ -34,8 +34,6 @@ IMPORT_FIELD_MAP = {
     "email": "email",
     "linkedin_url": "linkedin_url",
     "linkedin": "linkedin_url",
-    "twitter_url": "twitter_url",
-    "twitter": "twitter_url",
     "city": "city",
     "ville": "city",
     "country": "country",
@@ -52,7 +50,7 @@ IMPORT_FIELD_MAP = {
 
 ALLOWED_FIELDS = {
     "first_name", "last_name", "job_title", "email", "linkedin_url",
-    "twitter_url", "city", "country", "media_name", "media_type", "media_scope",
+    "city", "country", "media_name", "media_type", "media_scope",
 }
 
 
@@ -143,7 +141,6 @@ HUBSPOT_HEADERS = [
     "Media Type",
     "Media Scope",
     "LinkedIn",
-    "Twitter",
     "City",
     "Country",
     "Sector",
@@ -166,7 +163,6 @@ def _journalist_to_hubspot_row(j: Journalist, pitch_advice: str = "") -> dict[st
         "Media Type": j.media_type or "",
         "Media Scope": j.media_scope or "",
         "LinkedIn": j.linkedin_url or "",
-        "Twitter": j.twitter_url or "",
         "City": j.city or "",
         "Country": j.country or "",
         "Sector": j.sector_macro or "",

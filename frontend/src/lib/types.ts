@@ -6,8 +6,6 @@ export interface Journalist {
   email: string | null;
   email_status: string;
   linkedin_url: string | null;
-  twitter_url: string | null;
-  bluesky_url: string | null;
   city: string | null;
   country: string | null;
   media_name: string | null;
@@ -24,6 +22,7 @@ export interface Journalist {
   job_title_previous: string | null;
   media_name_previous: string | null;
   movement_alert: boolean;
+  bad_buzz_risk: boolean;
   is_watched: boolean;
   source: string | null;
   owner_id: string | null;
