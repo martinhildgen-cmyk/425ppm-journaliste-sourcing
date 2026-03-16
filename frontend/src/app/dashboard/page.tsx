@@ -116,33 +116,31 @@ export default function DashboardPage() {
           <CardHeader>
             <CardTitle>Bienvenue sur 425PPM Sourcing</CardTitle>
             <CardDescription>
-              Commencez a construire votre base journalistes en 3 etapes
+              Construisez votre liste de journalistes et laissez l&apos;IA vous aider a cibler les bons contacts
             </CardDescription>
           </CardHeader>
           <CardContent>
             <ol className="list-decimal list-inside space-y-2 text-sm">
               <li>
-                <strong>Importez vos contacts</strong> — Utilisez{" "}
+                <strong>Ajoutez des journalistes depuis LinkedIn</strong> — Collez un lien LinkedIn et l&apos;IA analyse le profil automatiquement
+              </li>
+              <li>
+                <strong>Importez une base existante</strong> — Utilisez{" "}
                 <Link href="/import" className="text-primary underline">
                   l&apos;import CSV
                 </Link>{" "}
-                pour charger votre base existante
+                pour charger vos contacts
               </li>
               <li>
-                <strong>Installez l&apos;extension Chrome</strong> — Capturez des
-                profils directement depuis LinkedIn
-              </li>
-              <li>
-                <strong>Enrichissez automatiquement</strong> — L&apos;IA analyse
-                les profils et trouve les articles recents
+                <strong>Proposez les bons sujets</strong> — L&apos;IA identifie les themes, la tonalite et les sujets a eviter pour chaque journaliste
               </li>
             </ol>
             <div className="flex gap-2 mt-4">
               <Button asChild size="sm">
-                <Link href="/import">Importer un CSV</Link>
+                <Link href="/journalists">Ajouter depuis LinkedIn</Link>
               </Button>
               <Button asChild size="sm" variant="outline">
-                <Link href="/journalists">Creer manuellement</Link>
+                <Link href="/import">Importer un CSV</Link>
               </Button>
             </div>
           </CardContent>
