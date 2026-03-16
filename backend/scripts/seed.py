@@ -223,7 +223,7 @@ SEED_JOURNALISTS = [
 ]
 
 
-async def seed():
+async def seed(force: bool = False):
     engine = create_async_engine(settings.DATABASE_URL)
     async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
@@ -234,8 +234,16 @@ async def seed():
         )
         count = result.scalar()
         if count and count > 0:
-            print(f"Database already has {count} journalists. Skipping seed.")
-            return
+            if not force:
+                print(f"Database already has {count} journalists. Skipping seed.")
+                print("Use --force to purge and re-seed.")
+                return
+            # Purge existing seed data (only fictif linkedin_url profiles)
+            await session.execute(
+                text("DELETE FROM journalists WHERE linkedin_url LIKE '%%-fictif'")
+            )
+            await session.commit()
+            print(f"Purged existing seed journalists.")
 
         from app.models.journalist import Journalist
 
@@ -312,4 +320,6 @@ async def seed():
 
 
 if __name__ == "__main__":
-    asyncio.run(seed())
+    import sys
+    force = "--force" in sys.argv
+    asyncio.run(seed(force=force))

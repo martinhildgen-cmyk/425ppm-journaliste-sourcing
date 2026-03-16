@@ -87,6 +87,7 @@ function JournalistsPageContent() {
     sector_macro: "",
   });
   const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
@@ -226,6 +227,7 @@ function JournalistsPageContent() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreating(true);
+    setCreateError(null);
     try {
       await apiFetch<Journalist>("/journalists/", {
         method: "POST",
@@ -248,8 +250,10 @@ function JournalistsPageContent() {
       setPage(1);
       setSearch("");
       setSearchInput("");
-    } catch {
-      // handle error
+    } catch (err) {
+      setCreateError(
+        err instanceof Error ? err.message : "Erreur lors de la creation du journaliste."
+      );
     } finally {
       setCreating(false);
     }
@@ -277,6 +281,11 @@ function JournalistsPageContent() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleCreate} className="grid grid-cols-2 gap-4">
+              {createError && (
+                <div className="col-span-2 rounded-md border border-red-200 bg-red-50 p-3">
+                  <p className="text-sm text-red-800">{createError}</p>
+                </div>
+              )}
               <Input
                 placeholder="Prenom"
                 value={createForm.first_name}

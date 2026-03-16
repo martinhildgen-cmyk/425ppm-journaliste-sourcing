@@ -31,6 +31,7 @@ export default function ClientsPage() {
     description: "",
   });
   const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchClients() {
@@ -69,6 +70,7 @@ export default function ClientsPage() {
     e.preventDefault();
     if (!createForm.name.trim()) return;
     setCreating(true);
+    setCreateError(null);
     try {
       const client = await apiFetch<Client>("/clients/", {
         method: "POST",
@@ -83,8 +85,10 @@ export default function ClientsPage() {
       setCampaignCounts({ ...campaignCounts, [client.id]: 0 });
       setShowCreateForm(false);
       setCreateForm({ name: "", sector: "", description: "" });
-    } catch {
-      // error
+    } catch (err) {
+      setCreateError(
+        err instanceof Error ? err.message : "Erreur lors de la creation du client."
+      );
     } finally {
       setCreating(false);
     }
@@ -111,6 +115,11 @@ export default function ClientsPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleCreate} className="space-y-4">
+              {createError && (
+                <div className="rounded-md border border-red-200 bg-red-50 p-3">
+                  <p className="text-sm text-red-800">{createError}</p>
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <Input
                   placeholder="Nom du client *"
