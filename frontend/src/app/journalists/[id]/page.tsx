@@ -144,17 +144,34 @@ export default function JournalistDetailPage({
 
   const handleSave = async () => {
     setSaving(true);
+    setErrorMsg(null);
     try {
+      // Only send editable fields to avoid validation errors
+      const payload = {
+        first_name: editForm.first_name ?? null,
+        last_name: editForm.last_name ?? null,
+        email: editForm.email ?? null,
+        job_title: editForm.job_title ?? null,
+        linkedin_url: editForm.linkedin_url ?? null,
+        twitter_url: editForm.twitter_url ?? null,
+        city: editForm.city ?? null,
+        country: editForm.country ?? null,
+        media_name: editForm.media_name ?? null,
+        media_type: editForm.media_type ?? null,
+        media_scope: editForm.media_scope ?? null,
+      };
       const updated = await apiFetch<Journalist>(`/journalists/${id}`, {
         method: "PUT",
         token: token ?? undefined,
-        body: JSON.stringify(editForm),
+        body: JSON.stringify(payload),
       });
       setJournalist(updated);
       setEditForm(updated);
       setEditing(false);
-    } catch {
-      // error
+    } catch (e) {
+      setErrorMsg(
+        e instanceof Error ? e.message : "Erreur lors de la sauvegarde"
+      );
     } finally {
       setSaving(false);
     }
@@ -321,8 +338,9 @@ export default function JournalistDetailPage({
     );
   }
 
+  const displaySource = editing ? editForm : journalist;
   const fullName =
-    [journalist.first_name, journalist.last_name].filter(Boolean).join(" ") ||
+    [displaySource.first_name, displaySource.last_name].filter(Boolean).join(" ") ||
     "Sans nom";
 
   return (
