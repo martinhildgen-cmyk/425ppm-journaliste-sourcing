@@ -72,7 +72,11 @@ async def import_csv(
     except UnicodeDecodeError:
         text = content.decode("latin-1")
 
-    reader = csv.DictReader(io.StringIO(text))
+    # Auto-detect delimiter (French Excel exports use ";")
+    sample = text[:2048]
+    dialect = csv.Sniffer().sniff(sample, delimiters=",;\t")
+
+    reader = csv.DictReader(io.StringIO(text), delimiter=dialect.delimiter)
     if not reader.fieldnames:
         raise HTTPException(status_code=400, detail="Empty or invalid CSV")
 
