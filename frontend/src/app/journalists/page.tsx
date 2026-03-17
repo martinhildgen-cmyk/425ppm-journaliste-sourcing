@@ -229,9 +229,17 @@ function JournalistsPageContent() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    setSearch(searchInput);
+    setSearch(searchInput.trim());
     setPage(1);
   };
+
+  // Clear search results when input is emptied
+  useEffect(() => {
+    if (searchInput === "" && search !== "") {
+      setSearch("");
+      setPage(1);
+    }
+  }, [searchInput, search]);
 
   const handleLinkedInAdd = async (e: React.FormEvent) => {
     e.preventDefault();
