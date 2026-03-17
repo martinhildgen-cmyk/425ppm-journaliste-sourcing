@@ -29,7 +29,7 @@ class PitchMatch(Base):
     risk_details: Mapped[str | None] = mapped_column(Text)
     is_draft: Mapped[bool] = mapped_column(Boolean, server_default="false")  # sandbox mode
     created_at: Mapped[datetime] = mapped_column(
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
         server_default="now()",
     )
     created_by: Mapped[uuid.UUID | None] = mapped_column(

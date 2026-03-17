@@ -23,6 +23,6 @@ class AuditLog(Base):
     entity_type: Mapped[str | None] = mapped_column(String(100))
     entity_id: Mapped[uuid.UUID | None] = mapped_column(PG_UUID(as_uuid=True))
     details: Mapped[dict | None] = mapped_column(JSON)
-    created_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     user = relationship("User", backref="audit_logs", lazy="selectin")
