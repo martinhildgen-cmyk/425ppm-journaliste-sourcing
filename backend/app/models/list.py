@@ -23,8 +23,8 @@ class List(Base):
     owner_id: Mapped[uuid.UUID | None] = mapped_column(
         PG_UUID(as_uuid=True), ForeignKey("users.id")
     )
-    created_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
-    updated_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     campaign = relationship("Campaign", backref="lists", lazy="selectin")
     owner = relationship("User", backref="lists", lazy="selectin")
@@ -42,4 +42,4 @@ class ListJournalist(Base):
     journalist_id: Mapped[uuid.UUID] = mapped_column(
         PG_UUID(as_uuid=True), ForeignKey("journalists.id"), primary_key=True
     )
-    added_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
+    added_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
