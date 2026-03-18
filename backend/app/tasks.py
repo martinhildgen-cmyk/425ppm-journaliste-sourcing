@@ -169,9 +169,9 @@ async def _discover_and_extract_articles(session: AsyncSession, journalist):
         trafilatura_breaker,
     )
 
-    query = f'"{journalist.first_name} {journalist.last_name}" article'
-    if journalist.media_name:
-        query += f" {journalist.media_name}"
+    from app.services.brave_search import build_article_query
+
+    query = build_article_query(journalist.first_name, journalist.last_name, journalist.media_name)
 
     cache_key = f"articles:{journalist.id}"
     cached = await cache_get(cache_key)
