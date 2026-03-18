@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
-import type { Journalist, JournalistListResponse } from "@/lib/types";
+import type { Journalist, JournalistListResponse, Client, Campaign, MediaList } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -99,6 +99,20 @@ function JournalistsPageContent() {
   const [createError, setCreateError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
+  // Multi-select
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showBulkAdd, setShowBulkAdd] = useState(false);
+
+  // Bulk add to list
+  const [clients, setClients] = useState<Client[]>([]);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [lists, setLists] = useState<MediaList[]>([]);
+  const [selectedClientId, setSelectedClientId] = useState("");
+  const [selectedCampaignId, setSelectedCampaignId] = useState("");
+  const [selectedListId, setSelectedListId] = useState("");
+  const [bulkAdding, setBulkAdding] = useState(false);
+  const [bulkSuccess, setBulkSuccess] = useState<string | null>(null);
+
   useEffect(() => {
     async function fetchData() {
       setLoading(true);
@@ -132,6 +146,25 @@ function JournalistsPageContent() {
 
   const columns = useMemo(
     () => [
+      columnHelper.display({
+        id: "select",
+        header: () => (
+          <input
+            type="checkbox"
+            checked={data.length > 0 && selectedIds.size === data.length}
+            onChange={toggleSelectAll}
+            className="h-4 w-4 accent-primary"
+          />
+        ),
+        cell: (info) => (
+          <input
+            type="checkbox"
+            checked={selectedIds.has(info.row.original.id)}
+            onChange={() => toggleSelect(info.row.original.id)}
+            className="h-4 w-4 accent-primary"
+          />
+        ),
+      }),
       columnHelper.accessor(
         (row) =>
           [row.first_name, row.last_name].filter(Boolean).join(" ") || "—",
@@ -216,7 +249,7 @@ function JournalistsPageContent() {
         ),
       }),
     ],
-    []
+    [data, selectedIds]
   );
 
   const table = useReactTable({
@@ -240,6 +273,55 @@ function JournalistsPageContent() {
       setPage(1);
     }
   }, [searchInput, search]);
+
+  useEffect(() => {
+    if (!showBulkAdd) return;
+    async function fetchClients() {
+      try {
+        const res = await apiFetch<Client[]>("/clients/", {
+          token: token ?? undefined,
+        });
+        setClients(res);
+      } catch {
+        // ignore
+      }
+    }
+    fetchClients();
+  }, [showBulkAdd, token]);
+
+  useEffect(() => {
+    if (!selectedClientId) { setCampaigns([]); setSelectedCampaignId(""); return; }
+    async function fetchCampaigns() {
+      try {
+        const res = await apiFetch<Campaign[]>(
+          `/campaigns/?client_id=${selectedClientId}`,
+          { token: token ?? undefined }
+        );
+        setCampaigns(res);
+        setSelectedCampaignId("");
+      } catch {
+        // ignore
+      }
+    }
+    fetchCampaigns();
+  }, [selectedClientId, token]);
+
+  useEffect(() => {
+    if (!selectedCampaignId) { setLists([]); setSelectedListId(""); return; }
+    async function fetchLists() {
+      try {
+        const res = await apiFetch<MediaList[]>(
+          `/lists/?campaign_id=${selectedCampaignId}`,
+          { token: token ?? undefined }
+        );
+        setLists(res);
+        setSelectedListId("");
+      } catch {
+        // ignore
+      }
+    }
+    fetchLists();
+  }, [selectedCampaignId, token]);
 
   const handleLinkedInAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -302,6 +384,51 @@ function JournalistsPageContent() {
       );
     } finally {
       setCreating(false);
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === data.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(data.map((j) => j.id)));
+    }
+  };
+
+  const handleBulkAddToList = async () => {
+    if (!selectedListId || selectedIds.size === 0) return;
+    setBulkAdding(true);
+    setBulkSuccess(null);
+    try {
+      const res = await apiFetch<{ added: number }>(
+        `/lists/${selectedListId}/journalists`,
+        {
+          method: "POST",
+          token: token ?? undefined,
+          body: JSON.stringify({ journalist_ids: Array.from(selectedIds) }),
+        }
+      );
+      setBulkSuccess(`${res.added} journaliste(s) ajoute(s) a la liste.`);
+      setSelectedIds(new Set());
+      setTimeout(() => {
+        setShowBulkAdd(false);
+        setBulkSuccess(null);
+      }, 2000);
+    } catch (err) {
+      setBulkSuccess(
+        err instanceof Error ? err.message : "Erreur lors de l'ajout."
+      );
+    } finally {
+      setBulkAdding(false);
     }
   };
 
@@ -531,6 +658,105 @@ function JournalistsPageContent() {
           <option value="culture">Culture</option>
         </select>
       </div>
+
+      {/* Bulk actions */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-4 rounded-md border border-primary/30 bg-primary/5 p-3">
+          <span className="text-sm font-medium">
+            {selectedIds.size} selectionne{selectedIds.size > 1 ? "s" : ""}
+          </span>
+          <Button
+            size="sm"
+            onClick={() => setShowBulkAdd(true)}
+          >
+            Ajouter a une liste
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setSelectedIds(new Set())}
+          >
+            Deselectionner
+          </Button>
+        </div>
+      )}
+
+      {/* Bulk add modal */}
+      {showBulkAdd && (
+        <Card className="border-primary/30">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Ajouter a une liste</CardTitle>
+                <CardDescription>
+                  Selectionnez la liste de destination pour {selectedIds.size} journaliste{selectedIds.size > 1 ? "s" : ""}
+                </CardDescription>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => setShowBulkAdd(false)}>
+                Fermer
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {bulkSuccess && (
+              <div className="rounded-md border border-green-200 bg-green-50 p-3">
+                <p className="text-sm text-green-800">{bulkSuccess}</p>
+              </div>
+            )}
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">Client</label>
+                <select
+                  className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+                  value={selectedClientId}
+                  onChange={(e) => setSelectedClientId(e.target.value)}
+                >
+                  <option value="">Choisir un client</option>
+                  {clients.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">Campagne</label>
+                <select
+                  className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+                  value={selectedCampaignId}
+                  onChange={(e) => setSelectedCampaignId(e.target.value)}
+                  disabled={!selectedClientId}
+                >
+                  <option value="">Choisir une campagne</option>
+                  {campaigns.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">Liste</label>
+                <select
+                  className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+                  value={selectedListId}
+                  onChange={(e) => setSelectedListId(e.target.value)}
+                  disabled={!selectedCampaignId}
+                >
+                  <option value="">Choisir une liste</option>
+                  {lists.map((l) => (
+                    <option key={l.id} value={l.id}>{l.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <Button
+                onClick={handleBulkAddToList}
+                disabled={!selectedListId || bulkAdding}
+              >
+                {bulkAdding ? "Ajout en cours..." : `Ajouter ${selectedIds.size} journaliste${selectedIds.size > 1 ? "s" : ""}`}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Table */}
       <div className="rounded-md border">

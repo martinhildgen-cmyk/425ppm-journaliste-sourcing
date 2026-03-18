@@ -5,7 +5,9 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
 import type { MediaList, Journalist } from "@/lib/types";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -52,6 +54,11 @@ export default function ListDetailPage({ params }: ListDetailPageProps) {
 
   const [list, setList] = useState<MediaList | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showAddPanel, setShowAddPanel] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<Journalist[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [addingIds, setAddingIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     async function fetchList() {
@@ -94,6 +101,54 @@ export default function ListDetailPage({ params }: ListDetailPageProps) {
     }
   };
 
+  const handleSearchJournalists = async (query: string) => {
+    setSearchQuery(query);
+    if (query.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+    setSearching(true);
+    try {
+      const res = await apiFetch<{ items: Journalist[] }>(
+        `/journalists/?search=${encodeURIComponent(query)}&page_size=10`,
+        { token: token ?? undefined }
+      );
+      // Filter out journalists already in the list
+      const existingIds = new Set((list?.journalists ?? []).map((j) => j.id));
+      setSearchResults(res.items.filter((j) => !existingIds.has(j.id)));
+    } catch {
+      // ignore
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const handleAddJournalist = async (journalistId: string) => {
+    setAddingIds((prev) => new Set(prev).add(journalistId));
+    try {
+      await apiFetch<{ added: number }>(`/lists/${id}/journalists`, {
+        method: "POST",
+        token: token ?? undefined,
+        body: JSON.stringify({ journalist_ids: [journalistId] }),
+      });
+      // Refresh the list
+      const data = await apiFetch<MediaList>(`/lists/${id}`, {
+        token: token ?? undefined,
+      });
+      setList(data);
+      // Remove from search results
+      setSearchResults((prev) => prev.filter((j) => j.id !== journalistId));
+    } catch {
+      // ignore
+    } finally {
+      setAddingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(journalistId);
+        return next;
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-8">
@@ -131,10 +186,69 @@ export default function ListDetailPage({ params }: ListDetailPageProps) {
             </p>
           </div>
         </div>
-        <Button onClick={handleExport} variant="outline">
-          Exporter CSV
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => setShowAddPanel(!showAddPanel)}>
+            {showAddPanel ? "Fermer" : "Ajouter des journalistes"}
+          </Button>
+          <Button onClick={handleExport} variant="outline">
+            Exporter CSV
+          </Button>
+        </div>
       </div>
+
+      {/* Add journalists panel */}
+      {showAddPanel && (
+        <Card className="border-primary/30">
+          <CardHeader>
+            <CardTitle>Ajouter des journalistes</CardTitle>
+            <CardDescription>
+              Recherchez dans l&apos;annuaire pour ajouter des journalistes a cette liste
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Input
+              placeholder="Rechercher par nom, media, email..."
+              value={searchQuery}
+              onChange={(e) => handleSearchJournalists(e.target.value)}
+              autoFocus
+            />
+            {searching && (
+              <p className="text-sm text-muted-foreground">Recherche...</p>
+            )}
+            {searchResults.length > 0 && (
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {searchResults.map((j) => (
+                  <div
+                    key={j.id}
+                    className="flex items-center justify-between rounded-md border p-3"
+                  >
+                    <div>
+                      <p className="text-sm font-medium">
+                        {[j.first_name, j.last_name].filter(Boolean).join(" ") || "—"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {j.media_name ?? "—"} · {j.job_title ?? "—"}
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() => handleAddJournalist(j.id)}
+                      disabled={addingIds.has(j.id)}
+                    >
+                      {addingIds.has(j.id) ? "Ajout..." : "Ajouter"}
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {searchQuery.length >= 2 && !searching && searchResults.length === 0 && (
+              <p className="text-sm text-muted-foreground">
+                Aucun journaliste trouve. Essayez un autre terme.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Journalists table */}
       <Card>
@@ -146,9 +260,14 @@ export default function ListDetailPage({ params }: ListDetailPageProps) {
         </CardHeader>
         <CardContent>
           {journalists.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Aucun journaliste dans cette liste.
-            </p>
+            <div className="text-center py-8 space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Aucun journaliste dans cette liste.
+              </p>
+              <Button onClick={() => setShowAddPanel(true)}>
+                Ajouter des journalistes
+              </Button>
+            </div>
           ) : (
             <div className="rounded-md border">
               <table className="w-full text-sm">

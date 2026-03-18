@@ -48,7 +48,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"] if settings.CORS_ALLOW_ALL else settings.CORS_ORIGINS,
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -65,9 +65,11 @@ async def global_exception_handler(request: Request, exc: Exception):
     # Ensure CORS headers are present on error responses
     origin = request.headers.get("origin")
     if origin:
-        response.headers["Access-Control-Allow-Origin"] = "*"
-        response.headers["Access-Control-Allow-Methods"] = "*"
-        response.headers["Access-Control-Allow-Headers"] = "*"
+        allowed = settings.CORS_ORIGINS if not settings.CORS_ALLOW_ALL else ["*"]
+        if "*" in allowed or origin in allowed:
+            response.headers["Access-Control-Allow-Origin"] = origin if "*" not in allowed else "*"
+            response.headers["Access-Control-Allow-Methods"] = "*"
+            response.headers["Access-Control-Allow-Headers"] = "*"
     return response
 
 
