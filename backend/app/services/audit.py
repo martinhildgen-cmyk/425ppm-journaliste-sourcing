@@ -20,9 +20,11 @@ async def log_action(
     details: dict | None = None,
 ) -> None:
     """Record an action in the audit log."""
+    if not user_id:
+        return  # Skip audit when auth is disabled (anonymous user)
     try:
         entry = AuditLog(
-            user_id=UUID(user_id) if user_id else None,
+            user_id=UUID(user_id),
             action=action,
             entity_type=entity_type,
             entity_id=UUID(entity_id) if entity_id else None,

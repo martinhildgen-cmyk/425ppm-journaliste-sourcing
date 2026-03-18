@@ -17,7 +17,9 @@ class Content(Base):
         default=uuid.uuid4,
     )
     journalist_id: Mapped[uuid.UUID] = mapped_column(
-        PG_UUID(as_uuid=True), ForeignKey("journalists.id"), nullable=False
+        PG_UUID(as_uuid=True),
+        ForeignKey("journalists.id", ondelete="CASCADE"),
+        nullable=False,
     )
     url: Mapped[str] = mapped_column(Text, nullable=False)
     title: Mapped[str | None] = mapped_column(String(1000))

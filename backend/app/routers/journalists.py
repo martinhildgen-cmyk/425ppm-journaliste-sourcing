@@ -194,18 +194,25 @@ async def delete_journalist(
     _user: dict = Depends(get_current_user),
 ):
     """Delete a journalist (RGPD: droit à l'oubli)."""
+    from sqlalchemy import delete as sa_delete
+
+    from app.models.content import Content
+    from app.models.list import ListJournalist
+    from app.models.note import Note
+    from app.models.pitch_match import PitchMatch
+
     result = await session.execute(select(Journalist).where(Journalist.id == journalist_id))
     journalist = result.scalar_one_or_none()
     if not journalist:
         raise HTTPException(status_code=404, detail="Journalist not found")
 
-    await log_action(
-        session,
-        user_id=_user["id"],
-        action="delete",
-        entity_type="journalist",
-        entity_id=str(journalist.id),
-        details={"first_name": journalist.first_name, "last_name": journalist.last_name},
+    # Delete related records manually (production DB may lack CASCADE constraints)
+    await session.execute(sa_delete(Content).where(Content.journalist_id == journalist_id))
+    await session.execute(sa_delete(Note).where(Note.journalist_id == journalist_id))
+    await session.execute(sa_delete(PitchMatch).where(PitchMatch.journalist_id == journalist_id))
+    await session.execute(
+        sa_delete(ListJournalist).where(ListJournalist.journalist_id == journalist_id)
     )
+
     await session.delete(journalist)
     await session.commit()
