@@ -220,12 +220,9 @@ async def _discover_and_extract_articles(session: AsyncSession, journalist):
         # Parse published_date string to datetime
         pub_date = None
         if article.published_date:
-            from dateutil import parser as dateparser
+            from app.routers.enrichment import _parse_date
 
-            try:
-                pub_date = dateparser.parse(article.published_date)
-            except (ValueError, TypeError):
-                pass
+            pub_date = _parse_date(article.published_date)
 
         content = Content(
             journalist_id=journalist.id,

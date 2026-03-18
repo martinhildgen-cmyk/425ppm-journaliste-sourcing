@@ -2,6 +2,8 @@
 
 import json
 import logging
+import re
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -18,6 +20,38 @@ from app.models.journalist import Journalist
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/enrichment", tags=["enrichment"])
+
+
+def _parse_date(date_str: str) -> datetime | None:
+    """Parse a date string — handles both ISO dates and relative ages like '2 hours ago'."""
+    if not date_str:
+        return None
+
+    # Try relative age: "2 hours ago", "3 days ago", etc.
+    match = re.match(r"(\d+)\s+(hour|day|week|month|minute)s?\s+ago", date_str, re.IGNORECASE)
+    if match:
+        amount = int(match.group(1))
+        unit = match.group(2).lower()
+        now = datetime.now(timezone.utc)
+        if unit == "minute":
+            return now - timedelta(minutes=amount)
+        elif unit == "hour":
+            return now - timedelta(hours=amount)
+        elif unit == "day":
+            return now - timedelta(days=amount)
+        elif unit == "week":
+            return now - timedelta(weeks=amount)
+        elif unit == "month":
+            return now - timedelta(days=amount * 30)
+        return now
+
+    # Try standard date parsing
+    from dateutil import parser as dateparser
+
+    try:
+        return dateparser.parse(date_str)
+    except (ValueError, TypeError):
+        return None
 
 
 @router.post("/journalists/{journalist_id}")
@@ -74,12 +108,7 @@ async def trigger_enrichment(
                 # Parse published_date string to datetime
                 pub_date = None
                 if article.published_date:
-                    from dateutil import parser as dateparser
-
-                    try:
-                        pub_date = dateparser.parse(article.published_date)
-                    except (ValueError, TypeError):
-                        pass
+                    pub_date = _parse_date(article.published_date)
 
                 content = Content(
                     journalist_id=journalist.id,
@@ -179,7 +208,9 @@ async def get_journalist_articles(
             "content_type": a.content_type,
             "published_at": a.published_at.isoformat() if a.published_at else None,
             "has_text": bool(a.body_text),
-            "description": (a.body_text[:200] + "...") if a.body_text and len(a.body_text) > 200 else a.body_text,
+            "description": (a.body_text[:200] + "...")
+            if a.body_text and len(a.body_text) > 200
+            else a.body_text,
         }
         for a in articles
     ]
