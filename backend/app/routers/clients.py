@@ -2,11 +2,12 @@ import uuid as uuid_mod
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
 from app.database import get_session
+from app.models.campaign import Campaign
 from app.models.client import Client
 from app.schemas import ClientCreate, ClientRead, ClientUpdate
 
@@ -20,6 +21,36 @@ async def list_clients(
 ):
     result = await session.execute(select(Client).order_by(Client.created_at.desc()))
     return result.scalars().all()
+
+
+@router.get("/with-counts")
+async def list_clients_with_counts(
+    session: AsyncSession = Depends(get_session),
+    _user: dict = Depends(get_current_user),
+):
+    """List clients with campaign counts in a single query (avoids N+1)."""
+    stmt = (
+        select(Client, func.count(Campaign.id).label("campaign_count"))
+        .outerjoin(Campaign, Campaign.client_id == Client.id)
+        .group_by(Client.id)
+        .order_by(Client.created_at.desc())
+    )
+    result = await session.execute(stmt)
+    rows = result.all()
+    return [
+        {
+            "id": str(client.id),
+            "name": client.name,
+            "sector": client.sector,
+            "description": client.description,
+            "keywords": client.keywords,
+            "owner_id": str(client.owner_id) if client.owner_id else None,
+            "created_at": client.created_at.isoformat() if client.created_at else None,
+            "updated_at": client.updated_at.isoformat() if client.updated_at else None,
+            "campaign_count": count,
+        }
+        for client, count in rows
+    ]
 
 
 @router.post("/", response_model=ClientRead, status_code=201)

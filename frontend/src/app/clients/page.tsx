@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
-import type { Client, Campaign } from "@/lib/types";
+import type { Client } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -36,26 +36,15 @@ export default function ClientsPage() {
   useEffect(() => {
     async function fetchClients() {
       try {
-        const data = await apiFetch<Client[]>("/clients/", {
-          token: token ?? undefined,
-        });
-        setClients(data);
-
-        // Fetch campaign counts for each client
-        const counts: Record<string, number> = {};
-        await Promise.all(
-          data.map(async (client) => {
-            try {
-              const campaigns = await apiFetch<Campaign[]>(
-                `/campaigns/?client_id=${client.id}`,
-                { token: token ?? undefined }
-              );
-              counts[client.id] = campaigns.length;
-            } catch {
-              counts[client.id] = 0;
-            }
-          })
+        const data = await apiFetch<(Client & { campaign_count: number })[]>(
+          "/clients/with-counts",
+          { token: token ?? undefined }
         );
+        setClients(data);
+        const counts: Record<string, number> = {};
+        for (const client of data) {
+          counts[client.id] = client.campaign_count;
+        }
         setCampaignCounts(counts);
       } catch {
         // API not available
