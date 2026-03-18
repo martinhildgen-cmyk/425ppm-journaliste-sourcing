@@ -33,7 +33,7 @@ export async function apiFetch<T>(
       credentials: "include",
       headers: {
         "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(token && token !== "no-auth" ? { Authorization: `Bearer ${token}` } : {}),
         ...headers,
       },
       ...rest,
@@ -47,38 +47,7 @@ export async function apiFetch<T>(
     );
   }
 
-  if (res.status === 401 && !path.includes("/auth/")) {
-    // Try to refresh the access token via cookie
-    if (!isRefreshing) {
-      isRefreshing = true;
-      refreshPromise = tryRefreshToken();
-    }
-    const refreshed = await refreshPromise;
-    isRefreshing = false;
-    refreshPromise = null;
-
-    if (refreshed) {
-      // Retry the original request
-      res = await fetch(url, {
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          ...headers,
-        },
-        ...rest,
-      });
-    }
-  }
-
   if (!res.ok) {
-    if (res.status === 401) {
-      if (typeof window !== "undefined") {
-        localStorage.removeItem("token");
-        window.location.href = "/login";
-      }
-      throw new Error("Session expiree. Reconnectez-vous.");
-    }
 
     let detail = "";
     try {
