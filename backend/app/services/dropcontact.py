@@ -138,9 +138,7 @@ class DropcontactService:
     def _parse_result(body: dict) -> DropcontactResult:
         data = body.get("data", [])
         if not data:
-            return DropcontactResult(
-                email=None, email_status=None, linkedin_url=None, phone=None
-            )
+            return DropcontactResult(email=None, email_status=None, linkedin_url=None, phone=None)
 
         contact = data[0]
         email_list = contact.get("email")
@@ -159,6 +157,4 @@ class DropcontactService:
 
     @staticmethod
     def _empty_result() -> DropcontactResult:
-        return DropcontactResult(
-            email=None, email_status=None, linkedin_url=None, phone=None
-        )
+        return DropcontactResult(email=None, email_status=None, linkedin_url=None, phone=None)

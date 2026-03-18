@@ -26,13 +26,9 @@ from app.schemas import (
 router = APIRouter(prefix="/ai", tags=["ai"])
 
 
-async def _get_journalist_with_articles(
-    journalist_id: UUID, session: AsyncSession
-) -> tuple:
+async def _get_journalist_with_articles(journalist_id: UUID, session: AsyncSession) -> tuple:
     """Fetch journalist and their articles."""
-    result = await session.execute(
-        select(Journalist).where(Journalist.id == journalist_id)
-    )
+    result = await session.execute(select(Journalist).where(Journalist.id == journalist_id))
     journalist = result.scalar_one_or_none()
     if not journalist:
         raise HTTPException(status_code=404, detail="Journalist not found")
@@ -55,10 +51,7 @@ async def _get_journalist_with_articles(
         "tags_micro": journalist.tags_micro,
     }
 
-    articles_list = [
-        {"title": a.title or "", "text": a.body_text or ""}
-        for a in articles
-    ]
+    articles_list = [{"title": a.title or "", "text": a.body_text or ""} for a in articles]
 
     return journalist, journalist_dict, articles_list
 
@@ -114,9 +107,7 @@ async def analyze_journalist(
     )
 
 
-@router.post(
-    "/journalists/{journalist_id}/pitch-match", response_model=PitchMatchResponse
-)
+@router.post("/journalists/{journalist_id}/pitch-match", response_model=PitchMatchResponse)
 async def pitch_match(
     journalist_id: UUID,
     body: PitchMatchRequest,
@@ -195,8 +186,6 @@ async def list_prompt_versions(
 ):
     """List all prompt versions."""
     result = await session.execute(
-        select(PromptVersion).order_by(
-            PromptVersion.prompt_name, PromptVersion.version.desc()
-        )
+        select(PromptVersion).order_by(PromptVersion.prompt_name, PromptVersion.version.desc())
     )
     return result.scalars().all()

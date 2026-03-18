@@ -10,9 +10,7 @@ from app.database import Base
 
 class PromptVersion(Base):
     __tablename__ = "prompt_versions"
-    __table_args__ = (
-        UniqueConstraint("prompt_name", "version", name="uq_prompt_name_version"),
-    )
+    __table_args__ = (UniqueConstraint("prompt_name", "version", name="uq_prompt_name_version"),)
 
     id: Mapped[uuid.UUID] = mapped_column(
         PG_UUID(as_uuid=True),

@@ -30,9 +30,7 @@ async def trigger_enrichment(
 
     Runs synchronously inline — no Celery worker needed.
     """
-    result = await session.execute(
-        select(Journalist).where(Journalist.id == journalist_id)
-    )
+    result = await session.execute(select(Journalist).where(Journalist.id == journalist_id))
     journalist = result.scalar_one_or_none()
     if not journalist:
         raise HTTPException(status_code=404, detail="Journalist not found")
@@ -56,9 +54,7 @@ async def trigger_enrichment(
             extractor = ArticleExtractorService()
             for article in articles:
                 # Check if already in DB
-                existing = await session.execute(
-                    select(Content).where(Content.url == article.url)
-                )
+                existing = await session.execute(select(Content).where(Content.url == article.url))
                 if existing.scalar_one_or_none():
                     continue
 
@@ -103,9 +99,7 @@ async def trigger_email_enrichment(
     _user: dict = Depends(get_current_user),
 ):
     """Trigger email-only enrichment for a journalist."""
-    result = await session.execute(
-        select(Journalist).where(Journalist.id == journalist_id)
-    )
+    result = await session.execute(select(Journalist).where(Journalist.id == journalist_id))
     if not result.scalar_one_or_none():
         raise HTTPException(status_code=404, detail="Journalist not found")
 
@@ -122,9 +116,7 @@ async def trigger_article_discovery(
     _user: dict = Depends(get_current_user),
 ):
     """Trigger article discovery for a journalist."""
-    result = await session.execute(
-        select(Journalist).where(Journalist.id == journalist_id)
-    )
+    result = await session.execute(select(Journalist).where(Journalist.id == journalist_id))
     if not result.scalar_one_or_none():
         raise HTTPException(status_code=404, detail="Journalist not found")
 
@@ -186,7 +178,6 @@ async def enrichment_progress_sse(
 
     async def event_stream():
         import asyncio
-
 
         # Check for active tasks for this journalist
         # This is a simplified SSE — in production you'd use Redis pub/sub

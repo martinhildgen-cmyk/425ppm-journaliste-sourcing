@@ -210,6 +210,7 @@ class NoteRead(BaseModel):
 
 class AIAnalyzeRequest(BaseModel):
     """Request to trigger AI analysis on a journalist."""
+
     is_draft: bool = False  # sandbox mode — don't persist results
     provider: str | None = None  # override LLM provider
     model: str | None = None  # override LLM model

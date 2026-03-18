@@ -24,6 +24,8 @@ class Content(Base):
     content_type: Mapped[str | None] = mapped_column(String(50))
     body_text: Mapped[str | None] = mapped_column(Text)
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    ingested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    ingested_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
 
     journalist = relationship("Journalist", backref="contents", lazy="selectin")
