@@ -39,14 +39,18 @@ def _build_redirect_uri(request: Request) -> str:
 
 
 def _set_auth_cookies(response: Response, access_token: str, refresh_token: str) -> None:
-    """Set HttpOnly auth cookies on a response."""
+    """Set HttpOnly auth cookies on a response.
+
+    Uses SameSite=None in production for cross-origin cookie sending
+    (Vercel frontend ≠ Railway backend).
+    """
     is_prod = settings.ENVIRONMENT != "development"
     response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
         secure=is_prod,
-        samesite="lax",
+        samesite="none" if is_prod else "lax",
         max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         path="/",
     )
@@ -55,16 +59,16 @@ def _set_auth_cookies(response: Response, access_token: str, refresh_token: str)
         value=refresh_token,
         httponly=True,
         secure=is_prod,
-        samesite="lax",
+        samesite="none" if is_prod else "lax",
         max_age=REFRESH_TOKEN_EXPIRE_DAYS * 86400,
-        path="/auth/refresh",
+        path="/",
     )
 
 
 def _clear_auth_cookies(response: Response) -> None:
     """Clear auth cookies."""
     response.delete_cookie("access_token", path="/")
-    response.delete_cookie("refresh_token", path="/auth/refresh")
+    response.delete_cookie("refresh_token", path="/")
 
 
 @router.get("/google/login")
@@ -168,9 +172,9 @@ async def google_callback(
     refresh_token = create_refresh_token(data=token_data_jwt)
     logger.info("User %s logged in successfully", email)
 
-    # Redirect to frontend with cookies set
+    # Redirect to frontend with cookies set + token in URL as fallback
     frontend_url = settings.FRONTEND_URL.rstrip("/")
-    response = RedirectResponse(f"{frontend_url}/auth/callback")
+    response = RedirectResponse(f"{frontend_url}/auth/callback?token={access_token}")
     _set_auth_cookies(response, access_token, refresh_token)
     return response
 
