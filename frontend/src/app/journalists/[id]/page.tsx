@@ -75,8 +75,6 @@ export default function JournalistDetailPage({
 
   // AI Analysis
   const [analyzing, setAnalyzing] = useState(false);
-  const [draftAnalysis, setDraftAnalysis] = useState<AIAnalyzeResponse | null>(null);
-
   // Error messages
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -260,29 +258,24 @@ export default function JournalistDetailPage({
     }
   };
 
-  const handleAnalyze = async (isDraft: boolean) => {
+  const handleAnalyze = async () => {
     setAnalyzing(true);
-    setDraftAnalysis(null);
     setErrorMsg(null);
     try {
-      const result = await apiFetch<AIAnalyzeResponse>(
+      await apiFetch<AIAnalyzeResponse>(
         `/ai/journalists/${id}/analyze`,
         {
           method: "POST",
           token: token ?? undefined,
-          body: JSON.stringify({ is_draft: isDraft }),
+          body: JSON.stringify({ is_draft: false }),
         }
       );
-      if (isDraft) {
-        setDraftAnalysis(result);
-      } else {
-        // Refresh journalist data
-        const j = await apiFetch<Journalist>(`/journalists/${id}`, {
-          token: token ?? undefined,
-        });
-        setJournalist(j);
-        setEditForm(j);
-      }
+      // Refresh journalist data
+      const j = await apiFetch<Journalist>(`/journalists/${id}`, {
+        token: token ?? undefined,
+      });
+      setJournalist(j);
+      setEditForm(j);
     } catch (e) {
       setErrorMsg("Erreur lors de l'analyse IA. Verifiez la cle API LLM.");
     } finally {
@@ -466,6 +459,17 @@ export default function JournalistDetailPage({
             {journalist.media_name_previous && (
               <> Ancien media : {journalist.media_name_previous}.</>
             )}
+          </p>
+        </div>
+      )}
+
+      {/* Enrichment in progress indicator */}
+      {!journalist.ai_summary && journalist.created_at &&
+        (new Date().getTime() - new Date(journalist.created_at).getTime()) < 5 * 60 * 1000 && (
+        <div className="rounded-md border border-blue-200 bg-blue-50 p-4 flex items-center gap-3">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+          <p className="text-sm text-blue-800">
+            Enrichissement en cours... Les donnees de contact, articles et l&apos;analyse IA seront disponibles dans quelques instants.
           </p>
         </div>
       )}
@@ -668,65 +672,11 @@ export default function JournalistDetailPage({
               Analyse automatique du profil journaliste
             </CardDescription>
           </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleAnalyze(true)}
-              disabled={analyzing}
-            >
-              {analyzing ? "Analyse..." : "Re-analyser (test)"}
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => handleAnalyze(false)}
-              disabled={analyzing}
-            >
-              {analyzing ? "Analyse..." : "Analyser"}
-            </Button>
-          </div>
+          <Button size="sm" onClick={handleAnalyze} disabled={analyzing}>
+            {analyzing ? "Analyse en cours..." : journalist.ai_summary ? "Re-analyser" : "Analyser"}
+          </Button>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Draft preview */}
-          {draftAnalysis && (
-            <div className="rounded-md border border-amber-200 bg-amber-50 p-4 space-y-3">
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-200">
-                  Mode test
-                </Badge>
-                <span className="text-xs text-muted-foreground">
-                  Ces resultats ne sont pas enregistres
-                </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="ml-auto text-xs"
-                  onClick={() => setDraftAnalysis(null)}
-                >
-                  Fermer
-                </Button>
-              </div>
-              <FieldDisplay label="Resume IA (test)">
-                {draftAnalysis.ai_summary ?? "—"}
-              </FieldDisplay>
-              <FieldDisplay label="Tonalite (test)">
-                {draftAnalysis.ai_tonality ?? "—"}
-              </FieldDisplay>
-              <FieldDisplay label="Secteur (test)">
-                {draftAnalysis.sector_macro ?? "—"}
-              </FieldDisplay>
-              <FieldDisplay label="Tags (test)">
-                {draftAnalysis.tags_micro && draftAnalysis.tags_micro.length > 0 ? (
-                  <div className="flex flex-wrap gap-1">
-                    {draftAnalysis.tags_micro.map((tag) => (
-                      <Badge key={tag} variant="secondary">{tag}</Badge>
-                    ))}
-                  </div>
-                ) : "—"}
-              </FieldDisplay>
-            </div>
-          )}
-
           <FieldDisplay label="Resume IA">
             {journalist.ai_summary ?? "Pas encore analyse"}
           </FieldDisplay>
@@ -947,9 +897,7 @@ export default function JournalistDetailPage({
                       {pm.verdict}
                     </Badge>
                     <span className="text-xs font-mono">{pm.score_match}/100</span>
-                    {pm.is_draft && (
-                      <Badge variant="outline" className="text-[10px]">test</Badge>
-                    )}
+
                   </div>
                 </div>
               ))}
