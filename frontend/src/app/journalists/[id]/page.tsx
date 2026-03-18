@@ -64,7 +64,7 @@ export default function JournalistDetailPage({
 
   // Articles
   const [articles, setArticles] = useState<
-    { id: string; title: string; url: string; published_at: string | null; has_text: boolean }[]
+    { id: string; title: string; url: string; published_at: string | null; has_text: boolean; description: string | null }[]
   >([]);
   const [enriching, setEnriching] = useState(false);
 
@@ -921,6 +921,11 @@ export default function JournalistDetailPage({
                     >
                       {article.title || article.url}
                     </a>
+                    {article.description && (
+                      <p className="text-muted-foreground mt-1 text-xs line-clamp-2">
+                        {article.description}
+                      </p>
+                    )}
                     {article.published_at && (
                       <p className="text-muted-foreground mt-1 text-xs">
                         {new Date(article.published_at).toLocaleDateString(

@@ -52,7 +52,7 @@ async def trigger_enrichment(
             logger.warning("Enrichment query: %s", query)
 
             search_service = BraveSearchService(settings.BRAVE_SEARCH_API_KEY)
-            articles = await search_service.search_articles(query, count=5)
+            articles = await search_service.search_articles(query, count=10)
             logger.warning("Enrichment found %d articles for query: %s", len(articles), query)
 
             extractor = ArticleExtractorService()
@@ -168,7 +168,7 @@ async def get_journalist_articles(
         select(Content)
         .where(Content.journalist_id == journalist_id)
         .order_by(Content.published_at.desc().nullslast())
-        .limit(5)
+        .limit(10)
     )
     articles = result.scalars().all()
     return [
@@ -179,6 +179,7 @@ async def get_journalist_articles(
             "content_type": a.content_type,
             "published_at": a.published_at.isoformat() if a.published_at else None,
             "has_text": bool(a.body_text),
+            "description": (a.body_text[:200] + "...") if a.body_text and len(a.body_text) > 200 else a.body_text,
         }
         for a in articles
     ]
