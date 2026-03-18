@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo, Suspense } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
 import type { Journalist, JournalistListResponse, Client, Campaign, MediaList } from "@/lib/types";
@@ -65,15 +65,16 @@ type AddMode = "none" | "linkedin" | "manual";
 function JournalistsPageContent() {
   const { token } = useAuth();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [data, setData] = useState<Journalist[]>([]);
   const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(Number(searchParams.get("page") ?? "1"));
   const [pageSize] = useState(20);
   const [search, setSearch] = useState(searchParams.get("search") ?? "");
   const [searchInput, setSearchInput] = useState(searchParams.get("search") ?? "");
-  const [mediaType, setMediaType] = useState("");
-  const [mediaScope, setMediaScope] = useState("");
-  const [sectorMacro, setSectorMacro] = useState("");
+  const [mediaType, setMediaType] = useState(searchParams.get("media_type") ?? "");
+  const [mediaScope, setMediaScope] = useState(searchParams.get("media_scope") ?? "");
+  const [sectorMacro, setSectorMacro] = useState(searchParams.get("sector_macro") ?? "");
   const [movementAlertFilter] = useState(searchParams.get("movement_alert") === "true");
   const [loading, setLoading] = useState(true);
   const [addMode, setAddMode] = useState<AddMode>("none");
@@ -274,6 +275,19 @@ function JournalistsPageContent() {
       setPage(1);
     }
   }, [searchInput, search]);
+
+  // Sync filters to URL
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (search) params.set("search", search);
+    if (mediaType) params.set("media_type", mediaType);
+    if (mediaScope) params.set("media_scope", mediaScope);
+    if (sectorMacro) params.set("sector_macro", sectorMacro);
+    if (page > 1) params.set("page", String(page));
+    const query = params.toString();
+    const newUrl = query ? `/journalists?${query}` : "/journalists";
+    router.replace(newUrl, { scroll: false });
+  }, [search, mediaType, mediaScope, sectorMacro, page, router]);
 
   useEffect(() => {
     if (!showBulkAdd) return;

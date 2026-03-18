@@ -84,6 +84,9 @@ export default function JournalistDetailPage({
   const [pitching, setPitching] = useState(false);
   const [pitchHistory, setPitchHistory] = useState<PitchMatch[]>([]);
 
+  // Tabs
+  const [activeTab, setActiveTab] = useState<"intelligence" | "profil" | "activite" | "notes">("intelligence");
+
   useEffect(() => {
     async function fetchJournalist() {
       try {
@@ -474,6 +477,30 @@ export default function JournalistDetailPage({
         </div>
       )}
 
+      {/* Tabs */}
+      <div className="flex gap-1 border-b">
+        {([
+          { key: "intelligence", label: "Intelligence" },
+          { key: "profil", label: "Profil" },
+          { key: "activite", label: "Activite" },
+          { key: "notes", label: "Notes" },
+        ] as const).map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === tab.key
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === "profil" && (
+      <>
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Identite */}
         <Card>
@@ -663,6 +690,50 @@ export default function JournalistDetailPage({
         </Card>
       </div>
 
+      {/* Suivi */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Suivi</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <FieldDisplay label="Suivi actif">
+            <Badge variant={journalist.is_watched ? "default" : "secondary"}>
+              {journalist.is_watched ? "Oui" : "Non"}
+            </Badge>
+          </FieldDisplay>
+          <FieldDisplay label="Alerte mouvement">
+            {journalist.movement_alert ? (
+              <Badge variant="destructive">Changement detecte</Badge>
+            ) : (
+              <span className="text-muted-foreground">Aucun</span>
+            )}
+          </FieldDisplay>
+          {journalist.job_title_previous && (
+            <FieldDisplay label="Ancien poste">
+              {journalist.job_title_previous}
+            </FieldDisplay>
+          )}
+          {journalist.media_name_previous && (
+            <FieldDisplay label="Ancien media">
+              {journalist.media_name_previous}
+            </FieldDisplay>
+          )}
+          <FieldDisplay label="Source">
+            {journalist.source ?? "—"}
+          </FieldDisplay>
+          <FieldDisplay label="Cree le">
+            {new Date(journalist.created_at).toLocaleDateString("fr-FR")}
+          </FieldDisplay>
+          <FieldDisplay label="Modifie le">
+            {new Date(journalist.updated_at).toLocaleDateString("fr-FR")}
+          </FieldDisplay>
+        </CardContent>
+      </Card>
+      </>
+      )}
+
+      {activeTab === "intelligence" && (
+      <>
       {/* Intelligence IA */}
       <Card className="border-primary/20 bg-primary/[0.02]">
         <CardHeader className="flex flex-row items-center justify-between">
@@ -712,106 +783,6 @@ export default function JournalistDetailPage({
                 "fr-FR"
               )}
             </p>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Suivi */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Suivi</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <FieldDisplay label="Suivi actif">
-            <Badge variant={journalist.is_watched ? "default" : "secondary"}>
-              {journalist.is_watched ? "Oui" : "Non"}
-            </Badge>
-          </FieldDisplay>
-          <FieldDisplay label="Alerte mouvement">
-            {journalist.movement_alert ? (
-              <Badge variant="destructive">Changement detecte</Badge>
-            ) : (
-              <span className="text-muted-foreground">Aucun</span>
-            )}
-          </FieldDisplay>
-          {journalist.job_title_previous && (
-            <FieldDisplay label="Ancien poste">
-              {journalist.job_title_previous}
-            </FieldDisplay>
-          )}
-          {journalist.media_name_previous && (
-            <FieldDisplay label="Ancien media">
-              {journalist.media_name_previous}
-            </FieldDisplay>
-          )}
-          <FieldDisplay label="Source">
-            {journalist.source ?? "—"}
-          </FieldDisplay>
-          <FieldDisplay label="Cree le">
-            {new Date(journalist.created_at).toLocaleDateString("fr-FR")}
-          </FieldDisplay>
-          <FieldDisplay label="Modifie le">
-            {new Date(journalist.updated_at).toLocaleDateString("fr-FR")}
-          </FieldDisplay>
-        </CardContent>
-      </Card>
-
-      {/* Enrichissement + Articles */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>Articles récents</CardTitle>
-            <CardDescription>
-              Derniers articles publiés par ce journaliste
-            </CardDescription>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleEnrich}
-            disabled={enriching}
-          >
-            {enriching ? "Enrichissement..." : "Enrichir"}
-          </Button>
-        </CardHeader>
-        <CardContent>
-          {articles.length === 0 ? (
-            <p className="text-muted-foreground text-sm">
-              Aucun article trouvé. Cliquez sur &quot;Enrichir&quot; pour lancer
-              la recherche.
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {articles.map((article) => (
-                <div
-                  key={article.id}
-                  className="flex items-start justify-between rounded-md border p-3"
-                >
-                  <div className="min-w-0 flex-1">
-                    <a
-                      href={article.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm font-medium hover:underline"
-                    >
-                      {article.title || article.url}
-                    </a>
-                    {article.published_at && (
-                      <p className="text-muted-foreground mt-1 text-xs">
-                        {new Date(article.published_at).toLocaleDateString(
-                          "fr-FR"
-                        )}
-                      </p>
-                    )}
-                  </div>
-                  {article.has_text && (
-                    <Badge variant="secondary" className="ml-2 shrink-0">
-                      Texte extrait
-                    </Badge>
-                  )}
-                </div>
-              ))}
-            </div>
           )}
         </CardContent>
       </Card>
@@ -905,7 +876,75 @@ export default function JournalistDetailPage({
           )}
         </CardContent>
       </Card>
+      </>
+      )}
 
+      {activeTab === "activite" && (
+      <>
+      {/* Enrichissement + Articles */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Articles recents</CardTitle>
+            <CardDescription>
+              Derniers articles publies par ce journaliste
+            </CardDescription>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleEnrich}
+            disabled={enriching}
+          >
+            {enriching ? "Enrichissement..." : "Enrichir"}
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {articles.length === 0 ? (
+            <p className="text-muted-foreground text-sm">
+              Aucun article trouve. Cliquez sur &quot;Enrichir&quot; pour lancer
+              la recherche.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {articles.map((article) => (
+                <div
+                  key={article.id}
+                  className="flex items-start justify-between rounded-md border p-3"
+                >
+                  <div className="min-w-0 flex-1">
+                    <a
+                      href={article.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm font-medium hover:underline"
+                    >
+                      {article.title || article.url}
+                    </a>
+                    {article.published_at && (
+                      <p className="text-muted-foreground mt-1 text-xs">
+                        {new Date(article.published_at).toLocaleDateString(
+                          "fr-FR"
+                        )}
+                      </p>
+                    )}
+                  </div>
+                  {article.has_text && (
+                    <Badge variant="secondary" className="ml-2 shrink-0">
+                      Texte extrait
+                    </Badge>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      </>
+      )}
+
+      {activeTab === "notes" && (
+      <>
       {/* Notes */}
       <Card>
         <CardHeader>
@@ -961,6 +1000,8 @@ export default function JournalistDetailPage({
           )}
         </CardContent>
       </Card>
+      </>
+      )}
     </div>
   );
 }
