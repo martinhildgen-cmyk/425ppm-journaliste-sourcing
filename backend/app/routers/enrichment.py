@@ -37,6 +37,7 @@ async def trigger_enrichment(
 
     articles_found = 0
     errors = []
+    debug_query = None
 
     # Article discovery via Brave Search
     if journalist.first_name and journalist.last_name and settings.BRAVE_SEARCH_API_KEY:
@@ -47,9 +48,12 @@ async def trigger_enrichment(
             query = build_article_query(
                 journalist.first_name, journalist.last_name, journalist.media_name
             )
+            debug_query = query
+            logger.info("Enrichment query: %s", query)
 
             search_service = BraveSearchService(settings.BRAVE_SEARCH_API_KEY)
             articles = await search_service.search_articles(query, count=5)
+            logger.info("Enrichment found %d articles for query: %s", len(articles), query)
 
             extractor = ArticleExtractorService()
             for article in articles:
@@ -89,6 +93,7 @@ async def trigger_enrichment(
         "status": "completed",
         "articles_found": articles_found,
         "errors": errors,
+        "debug_query": debug_query,
     }
 
 
