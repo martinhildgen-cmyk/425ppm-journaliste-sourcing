@@ -5,7 +5,7 @@ from uuid import UUID
 import os
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import cast, func, select, text, type_coerce
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
@@ -118,7 +118,6 @@ async def create_journalist(
     await session.commit()
 
     # Trigger background enrichment (non-blocking, fails silently)
-    import os
 
     if not os.environ.get("TESTING"):
         try:

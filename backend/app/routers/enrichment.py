@@ -187,7 +187,6 @@ async def enrichment_progress_sse(
     async def event_stream():
         import asyncio
 
-        from app.worker import celery_app
 
         # Check for active tasks for this journalist
         # This is a simplified SSE — in production you'd use Redis pub/sub

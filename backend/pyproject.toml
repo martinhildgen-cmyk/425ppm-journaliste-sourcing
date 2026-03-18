@@ -28,6 +28,7 @@ dev = [
     "pytest-asyncio",
     "pytest-cov",
     "httpx",
+    "aiosqlite",
     "ruff",
     "mypy",
 ]

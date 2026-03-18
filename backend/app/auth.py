@@ -9,7 +9,6 @@ Usage in routers:
 """
 
 from datetime import datetime, timedelta, timezone
-from uuid import UUID
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer

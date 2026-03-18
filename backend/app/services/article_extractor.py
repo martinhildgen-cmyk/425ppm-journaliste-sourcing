@@ -72,7 +72,7 @@ class ArticleExtractorService:
             if not text:
                 return None
 
-            metadata = trafilatura.extract(
+            trafilatura.extract(
                 downloaded,
                 include_comments=False,
                 include_tables=False,
