@@ -77,7 +77,7 @@ async def get_current_user(
 ) -> dict:
     """Extract and validate current user from cookie or Bearer header.
 
-    Priority: Bearer header (extension) > cookie (web app).
+    Auth is temporarily disabled — returns a default user if no token is provided.
     """
     token: str | None = None
 
@@ -89,18 +89,20 @@ async def get_current_user(
     if not token:
         token = request.cookies.get("access_token")
 
+    # 3. Auth disabled: return default user if no token
     if not token:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authenticated",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        return {
+            "id": "00000000-0000-0000-0000-000000000000",
+            "email": "anonymous@425ppm.fr",
+            "role": "user",
+        }
 
     payload = decode_access_token(token)
     user_id = payload.get("sub")
     if user_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token payload",
-        )
+        return {
+            "id": "00000000-0000-0000-0000-000000000000",
+            "email": "anonymous@425ppm.fr",
+            "role": "user",
+        }
     return {"id": user_id, "email": payload.get("email"), "role": payload.get("role")}

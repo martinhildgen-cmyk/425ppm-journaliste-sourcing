@@ -1,40 +1,10 @@
 "use client";
 
-import { AuthProvider, useAuth } from "@/lib/auth";
+import { AuthProvider } from "@/lib/auth";
 import { Sidebar } from "@/components/sidebar";
-import { usePathname, useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { usePathname } from "next/navigation";
 
 const PUBLIC_PATHS = ["/", "/login", "/auth/callback"];
-
-function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { token, loading } = useAuth();
-  const pathname = usePathname();
-  const router = useRouter();
-  const isPublic = PUBLIC_PATHS.some(
-    (p) => pathname === p || pathname.startsWith("/auth/"),
-  );
-
-  useEffect(() => {
-    if (!loading && !token && !isPublic) {
-      router.replace("/login");
-    }
-  }, [token, loading, isPublic, router]);
-
-  if (loading && !isPublic) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <p className="text-muted-foreground">Chargement...</p>
-      </div>
-    );
-  }
-
-  if (!token && !isPublic) {
-    return null;
-  }
-
-  return <>{children}</>;
-}
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -44,16 +14,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthProvider>
-      <AuthGuard>
-        {isPublicPage ? (
-          <>{children}</>
-        ) : (
-          <div className="flex h-screen overflow-hidden">
-            <Sidebar />
-            <main className="flex-1 overflow-y-auto">{children}</main>
-          </div>
-        )}
-      </AuthGuard>
+      {isPublicPage ? (
+        <>{children}</>
+      ) : (
+        <div className="flex h-screen overflow-hidden">
+          <Sidebar />
+          <main className="flex-1 overflow-y-auto">{children}</main>
+        </div>
+      )}
     </AuthProvider>
   );
 }

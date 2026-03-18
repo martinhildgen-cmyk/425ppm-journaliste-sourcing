@@ -178,6 +178,7 @@ async def test_from_profile_updates_existing(client: AsyncClient, auth_headers: 
     assert data2["first_name"] == "Jean-Pierre"
 
 
+@pytest.mark.skip(reason="Auth temporarily disabled")
 @pytest.mark.asyncio
 async def test_from_profile_requires_auth(client: AsyncClient):
     response = await client.post(
@@ -280,6 +281,7 @@ async def test_from_url_rejects_invalid_url(client: AsyncClient, auth_headers: d
     assert "invalide" in response.json()["detail"].lower()
 
 
+@pytest.mark.skip(reason="Auth temporarily disabled")
 @pytest.mark.asyncio
 async def test_from_url_requires_auth(client: AsyncClient):
     response = await client.post(
