@@ -18,7 +18,8 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-SEARCH_URL = "https://api.search.brave.com/res/v1/web/search"
+WEB_SEARCH_URL = "https://api.search.brave.com/res/v1/web/search"
+NEWS_SEARCH_URL = "https://api.search.brave.com/res/v1/news/search"
 
 # Domains that are social media, directory, or profile aggregator sites.
 _FILTERED_DOMAINS = {
@@ -91,20 +92,13 @@ _MEDIA_DOMAINS: dict[str, str] = {
 
 
 def build_article_query(first_name: str, last_name: str, media_name: str | None = None) -> str:
-    """Build an optimized search query to find articles by a journalist.
-
-    Uses site: operator when the media domain is known.
-    """
+    """Build a search query to find articles by a journalist."""
     name_part = f'"{first_name} {last_name}"'
 
     if media_name:
-        media_lower = media_name.strip().lower()
-        domain = _MEDIA_DOMAINS.get(media_lower)
-        if domain:
-            return f"{name_part} site:{domain}"
-        return f"{name_part} article {media_name}"
+        return f"{name_part} {media_name}"
 
-    return f"{name_part} article"
+    return name_part
 
 
 @dataclass
@@ -126,24 +120,89 @@ class BraveSearchService:
         query: str,
         count: int = 5,
     ) -> list[ArticleResult]:
-        """Search for articles matching *query* and return up to *count* results.
+        """Search for articles matching *query* using Brave News API first, then Web.
 
-        Social-media and directory pages are filtered out automatically.
+        News API returns actual articles with dates. Web API is used as fallback.
         """
+        # Try News API first — returns real articles
+        articles = await self._search_news(query, count)
+        if articles:
+            return articles
+
+        # Fallback to Web API with filtering
+        return await self._search_web(query, count)
+
+    async def _search_news(self, query: str, count: int) -> list[ArticleResult]:
+        """Search using Brave News API — returns actual news articles."""
+        headers = {
+            "X-Subscription-Token": self.api_key,
+            "Accept": "application/json",
+        }
+        # News API uses simpler query (no site: operator needed)
+        simple_query = query.replace("site:", "").strip()
+        params = {
+            "q": simple_query,
+            "count": count,
+            "search_lang": "fr",
+            "freshness": "py",  # past year
+        }
+
+        try:
+            async with httpx.AsyncClient(timeout=20) as client:
+                resp = await client.get(
+                    NEWS_SEARCH_URL,
+                    headers=headers,
+                    params=params,
+                )
+                resp.raise_for_status()
+                body = resp.json()
+        except httpx.HTTPStatusError as exc:
+            logger.warning(
+                "Brave News API error %s: %s", exc.response.status_code, exc.response.text
+            )
+            return []
+        except Exception:
+            logger.exception("Brave News API: unexpected error")
+            return []
+
+        raw_results = body.get("results", [])
+        articles: list[ArticleResult] = []
+
+        for item in raw_results:
+            url: str = item.get("url", "")
+            title: str = item.get("title", "")
+            if self._is_filtered(url):
+                continue
+
+            articles.append(
+                ArticleResult(
+                    title=title,
+                    url=url,
+                    description=item.get("description"),
+                    published_date=item.get("age") or item.get("page_age"),
+                )
+            )
+            if len(articles) >= count:
+                break
+
+        return articles
+
+    async def _search_web(self, query: str, count: int) -> list[ArticleResult]:
+        """Fallback: search using Brave Web API with filtering."""
         headers = {
             "X-Subscription-Token": self.api_key,
             "Accept": "application/json",
         }
         params = {
             "q": query,
-            "count": 20,  # Request many to compensate for heavy filtering
+            "count": 20,
             "search_lang": "fr",
         }
 
         try:
             async with httpx.AsyncClient(timeout=20) as client:
                 resp = await client.get(
-                    SEARCH_URL,
+                    WEB_SEARCH_URL,
                     headers=headers,
                     params=params,
                 )
@@ -151,13 +210,11 @@ class BraveSearchService:
                 body = resp.json()
         except httpx.HTTPStatusError as exc:
             logger.error(
-                "Brave Search HTTP error %s: %s",
-                exc.response.status_code,
-                exc.response.text,
+                "Brave Web Search error %s: %s", exc.response.status_code, exc.response.text
             )
             return []
         except Exception:
-            logger.exception("Brave Search: unexpected error")
+            logger.exception("Brave Web Search: unexpected error")
             return []
 
         raw_results = body.get("web", {}).get("results", [])
