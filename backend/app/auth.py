@@ -18,6 +18,8 @@ from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 
+import uuid as uuid_mod
+
 from app.config import settings
 
 # Optional bearer — won't fail if no Authorization header (we check cookie too)
@@ -92,7 +94,7 @@ async def get_current_user(
     # 3. Auth disabled: return default user if no token
     if not token:
         return {
-            "id": "00000000-0000-0000-0000-000000000000",
+            "id": None,
             "email": "anonymous@425ppm.fr",
             "role": "user",
         }
@@ -101,8 +103,16 @@ async def get_current_user(
     user_id = payload.get("sub")
     if user_id is None:
         return {
-            "id": "00000000-0000-0000-0000-000000000000",
+            "id": None,
             "email": "anonymous@425ppm.fr",
             "role": "user",
         }
     return {"id": user_id, "email": payload.get("email"), "role": payload.get("role")}
+
+
+def get_user_uuid(user: dict) -> uuid_mod.UUID | None:
+    """Get user UUID from auth dict, or None if anonymous."""
+    uid = user.get("id")
+    if uid is None:
+        return None
+    return uuid_mod.UUID(uid) if isinstance(uid, str) else uid

@@ -1,11 +1,10 @@
-import uuid as uuid_mod
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import get_current_user
+from app.auth import get_current_user, get_user_uuid
 from app.database import get_session
 from app.models.campaign import Campaign
 from app.schemas import CampaignCreate, CampaignRead, CampaignUpdate
@@ -32,7 +31,7 @@ async def create_campaign(
     session: AsyncSession = Depends(get_session),
     user: dict = Depends(get_current_user),
 ):
-    campaign = Campaign(**data.model_dump(), owner_id=uuid_mod.UUID(user["id"]))
+    campaign = Campaign(**data.model_dump(), owner_id=get_user_uuid(user))
     session.add(campaign)
     await session.commit()
     await session.refresh(campaign)

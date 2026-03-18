@@ -1,11 +1,10 @@
-import uuid as uuid_mod
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import get_current_user
+from app.auth import get_current_user, get_user_uuid
 from app.database import get_session
 from app.models.journalist import Journalist
 from app.models.note import Note
@@ -39,7 +38,7 @@ async def create_note(
     if not j_result.scalar_one_or_none():
         raise HTTPException(status_code=404, detail="Journalist not found")
 
-    note = Note(journalist_id=journalist_id, author_id=uuid_mod.UUID(user["id"]), body=data.body)
+    note = Note(journalist_id=journalist_id, author_id=get_user_uuid(user), body=data.body)
     session.add(note)
     await log_action(
         session,

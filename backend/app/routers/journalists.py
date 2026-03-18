@@ -1,4 +1,3 @@
-import uuid as uuid_mod
 from datetime import datetime, timezone
 from uuid import UUID
 
@@ -8,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import get_current_user
+from app.auth import get_current_user, get_user_uuid
 from app.database import get_session
 from app.models.journalist import Journalist
 from app.schemas import (
@@ -100,9 +99,7 @@ async def create_journalist(
     user: dict = Depends(get_current_user),
 ):
     """Create a new journalist. Triggers background enrichment if possible."""
-    journalist = Journalist(
-        **data.model_dump(exclude_unset=True), owner_id=uuid_mod.UUID(user["id"])
-    )
+    journalist = Journalist(**data.model_dump(exclude_unset=True), owner_id=get_user_uuid(user))
     session.add(journalist)
     await session.commit()
     await session.refresh(journalist)

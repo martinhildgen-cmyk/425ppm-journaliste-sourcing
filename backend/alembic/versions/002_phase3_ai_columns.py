@@ -29,9 +29,7 @@ def upgrade() -> None:
         ("risk_details", "TEXT"),
     ]:
         conn.execute(
-            sa.text(
-                f"ALTER TABLE pitch_matches ADD COLUMN IF NOT EXISTS {col_name} {col_type}"
-            )
+            sa.text(f"ALTER TABLE pitch_matches ADD COLUMN IF NOT EXISTS {col_name} {col_type}")
         )
 
 

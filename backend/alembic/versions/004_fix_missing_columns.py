@@ -27,67 +27,68 @@ def upgrade() -> None:
     conn = op.get_bind()
 
     # ── clients table: add missing columns ──
-    conn.execute(sa.text(
-        "ALTER TABLE clients ADD COLUMN IF NOT EXISTS sector VARCHAR(255)"
-    ))
-    conn.execute(sa.text(
-        "ALTER TABLE clients ADD COLUMN IF NOT EXISTS description TEXT"
-    ))
-    conn.execute(sa.text(
-        "ALTER TABLE clients ADD COLUMN IF NOT EXISTS keywords JSON"
-    ))
-    conn.execute(sa.text(
-        "ALTER TABLE clients ADD COLUMN IF NOT EXISTS owner_id UUID REFERENCES users(id)"
-    ))
-    conn.execute(sa.text(
-        "ALTER TABLE clients ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()"
-    ))
-    conn.execute(sa.text(
-        "ALTER TABLE clients ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()"
-    ))
+    conn.execute(sa.text("ALTER TABLE clients ADD COLUMN IF NOT EXISTS sector VARCHAR(255)"))
+    conn.execute(sa.text("ALTER TABLE clients ADD COLUMN IF NOT EXISTS description TEXT"))
+    conn.execute(sa.text("ALTER TABLE clients ADD COLUMN IF NOT EXISTS keywords JSON"))
+    conn.execute(
+        sa.text("ALTER TABLE clients ADD COLUMN IF NOT EXISTS owner_id UUID REFERENCES users(id)")
+    )
+    conn.execute(
+        sa.text("ALTER TABLE clients ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()")
+    )
+    conn.execute(
+        sa.text("ALTER TABLE clients ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()")
+    )
 
     # ── lists table: add missing columns ──
-    conn.execute(sa.text(
-        "ALTER TABLE lists ADD COLUMN IF NOT EXISTS owner_id UUID REFERENCES users(id)"
-    ))
-    conn.execute(sa.text(
-        "ALTER TABLE lists ADD COLUMN IF NOT EXISTS campaign_id UUID REFERENCES campaigns(id) ON DELETE CASCADE"
-    ))
-    conn.execute(sa.text(
-        "ALTER TABLE lists ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()"
-    ))
-    conn.execute(sa.text(
-        "ALTER TABLE lists ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()"
-    ))
+    conn.execute(
+        sa.text("ALTER TABLE lists ADD COLUMN IF NOT EXISTS owner_id UUID REFERENCES users(id)")
+    )
+    conn.execute(
+        sa.text(
+            "ALTER TABLE lists ADD COLUMN IF NOT EXISTS campaign_id UUID REFERENCES campaigns(id) ON DELETE CASCADE"
+        )
+    )
+    conn.execute(
+        sa.text("ALTER TABLE lists ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()")
+    )
+    conn.execute(
+        sa.text("ALTER TABLE lists ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()")
+    )
 
     # ── campaigns table: add missing columns ──
-    conn.execute(sa.text(
-        "ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS owner_id UUID REFERENCES users(id)"
-    ))
-    conn.execute(sa.text(
-        "ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS description TEXT"
-    ))
-    conn.execute(sa.text(
-        "ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'draft'"
-    ))
-    conn.execute(sa.text(
-        "ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()"
-    ))
-    conn.execute(sa.text(
-        "ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()"
-    ))
+    conn.execute(
+        sa.text("ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS owner_id UUID REFERENCES users(id)")
+    )
+    conn.execute(sa.text("ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS description TEXT"))
+    conn.execute(
+        sa.text("ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'draft'")
+    )
+    conn.execute(
+        sa.text(
+            "ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()"
+        )
+    )
+    conn.execute(
+        sa.text(
+            "ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()"
+        )
+    )
 
     # ── audit_log table: fix id type if it's BIGINT instead of UUID ──
     # Check current type and fix if needed
-    result = conn.execute(sa.text("""
+    result = conn.execute(
+        sa.text("""
         SELECT data_type FROM information_schema.columns
         WHERE table_name = 'audit_log' AND column_name = 'id'
-    """))
+    """)
+    )
     row = result.fetchone()
-    if row and row[0] != 'uuid':
+    if row and row[0] != "uuid":
         # Drop and recreate the id column as UUID
         # First drop any existing primary key constraint
-        conn.execute(sa.text("""
+        conn.execute(
+            sa.text("""
             DO $$
             BEGIN
                 -- Drop all rows since we're changing the PK type
@@ -99,33 +100,36 @@ def upgrade() -> None:
                 -- Add new UUID column
                 ALTER TABLE audit_log ADD COLUMN id UUID DEFAULT gen_random_uuid() PRIMARY KEY;
             END $$;
-        """))
+        """)
+        )
 
     # Ensure entity_id is UUID (might be VARCHAR or missing)
-    result = conn.execute(sa.text("""
+    result = conn.execute(
+        sa.text("""
         SELECT data_type FROM information_schema.columns
         WHERE table_name = 'audit_log' AND column_name = 'entity_id'
-    """))
+    """)
+    )
     row = result.fetchone()
-    if row and row[0] != 'uuid':
-        conn.execute(sa.text("""
+    if row and row[0] != "uuid":
+        conn.execute(
+            sa.text("""
             ALTER TABLE audit_log
             ALTER COLUMN entity_id TYPE UUID USING entity_id::UUID
-        """))
+        """)
+        )
     elif not row:
-        conn.execute(sa.text(
-            "ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS entity_id UUID"
-        ))
+        conn.execute(sa.text("ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS entity_id UUID"))
 
     # Ensure details column is JSONB
-    conn.execute(sa.text(
-        "ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS details JSONB"
-    ))
+    conn.execute(sa.text("ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS details JSONB"))
 
     # ── contents table: ensure url is TEXT (might be VARCHAR) ──
-    conn.execute(sa.text("""
+    conn.execute(
+        sa.text("""
         ALTER TABLE contents ALTER COLUMN url TYPE TEXT
-    """))
+    """)
+    )
 
 
 def downgrade() -> None:

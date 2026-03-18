@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import get_current_user
+from app.auth import get_current_user, get_user_uuid
 from app.database import get_session
 from app.models.journalist import Journalist
 from app.models.list import List, ListJournalist
@@ -244,7 +244,7 @@ async def create_from_url(
         linkedin_url=body.linkedin_url,
         source="chrome_extension",
         tags_micro=body.tags if body.tags else None,
-        owner_id=uuid_mod.UUID(user["id"]),
+        owner_id=get_user_uuid(user),
     )
     session.add(journalist)
     await session.flush()
