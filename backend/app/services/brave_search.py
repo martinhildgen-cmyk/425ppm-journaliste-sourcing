@@ -138,13 +138,12 @@ class BraveSearchService:
             "X-Subscription-Token": self.api_key,
             "Accept": "application/json",
         }
-        # News API uses simpler query (no site: operator needed)
-        simple_query = query.replace("site:", "").strip()
+        # Strip quotes and operators for News API (works best with plain text)
+        clean_query = query.replace('"', "").replace("site:", "").strip()
+        logger.info("Brave News API query: %s", clean_query)
         params = {
-            "q": simple_query,
+            "q": clean_query,
             "count": count,
-            "search_lang": "fr",
-            "freshness": "py",  # past year
         }
 
         try:
@@ -166,6 +165,11 @@ class BraveSearchService:
             return []
 
         raw_results = body.get("results", [])
+        logger.info(
+            "Brave News API returned %d results (keys: %s)",
+            len(raw_results),
+            list(body.keys()),
+        )
         articles: list[ArticleResult] = []
 
         for item in raw_results:
