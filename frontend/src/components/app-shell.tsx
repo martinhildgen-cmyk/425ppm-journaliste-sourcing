@@ -8,7 +8,7 @@ import { useEffect } from "react";
 const PUBLIC_PATHS = ["/", "/login", "/auth/callback"];
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { authenticated, loading } = useAuth();
+  const { token, loading } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
   const isPublic = PUBLIC_PATHS.some(
@@ -16,10 +16,10 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   );
 
   useEffect(() => {
-    if (!loading && !authenticated && !isPublic) {
+    if (!loading && !token && !isPublic) {
       router.replace("/login");
     }
-  }, [authenticated, loading, isPublic, router]);
+  }, [token, loading, isPublic, router]);
 
   if (loading && !isPublic) {
     return (
@@ -29,7 +29,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!authenticated && !isPublic) {
+  if (!token && !isPublic) {
     return null;
   }
 

@@ -48,7 +48,7 @@ export async function apiFetch<T>(
   }
 
   if (res.status === 401 && !path.includes("/auth/")) {
-    // Try to refresh the access token
+    // Try to refresh the access token via cookie
     if (!isRefreshing) {
       isRefreshing = true;
       refreshPromise = tryRefreshToken();
@@ -58,7 +58,7 @@ export async function apiFetch<T>(
     refreshPromise = null;
 
     if (refreshed) {
-      // Retry the original request with the new cookie
+      // Retry the original request
       res = await fetch(url, {
         credentials: "include",
         headers: {
@@ -73,7 +73,6 @@ export async function apiFetch<T>(
 
   if (!res.ok) {
     if (res.status === 401) {
-      // Refresh failed too — redirect to login
       if (typeof window !== "undefined") {
         localStorage.removeItem("token");
         window.location.href = "/login";
@@ -81,7 +80,6 @@ export async function apiFetch<T>(
       throw new Error("Session expiree. Reconnectez-vous.");
     }
 
-    // Try to extract error detail from response
     let detail = "";
     try {
       const body = await res.json();
