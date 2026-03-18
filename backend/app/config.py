@@ -13,8 +13,10 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_SECRET: str = ""
 
     FRONTEND_URL: str = "http://localhost:3000"
-    CORS_ORIGINS: list[str] = ["http://localhost:3000"]
-    CORS_ALLOW_ALL: bool = False
+    CORS_ORIGINS: list[str] = [
+        "http://localhost:3000",
+        "https://425ppm-journaliste-sourcing.vercel.app",
+    ]
 
     SENTRY_DSN: str = ""
 

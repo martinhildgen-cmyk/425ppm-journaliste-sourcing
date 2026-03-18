@@ -65,12 +65,11 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
     # Ensure CORS headers are present on error responses
     origin = request.headers.get("origin")
-    if origin:
-        allowed = settings.CORS_ORIGINS if not settings.CORS_ALLOW_ALL else ["*"]
-        if "*" in allowed or origin in allowed:
-            response.headers["Access-Control-Allow-Origin"] = origin if "*" not in allowed else "*"
-            response.headers["Access-Control-Allow-Methods"] = "*"
-            response.headers["Access-Control-Allow-Headers"] = "*"
+    if origin and origin in settings.CORS_ORIGINS:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Methods"] = "*"
+        response.headers["Access-Control-Allow-Headers"] = "*"
     return response
 
 
