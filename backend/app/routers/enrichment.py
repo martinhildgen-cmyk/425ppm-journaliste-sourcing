@@ -44,7 +44,7 @@ async def trigger_enrichment(
             from app.services.brave_search import BraveSearchService
             from app.services.article_extractor import ArticleExtractorService
 
-            query = f"{journalist.first_name} {journalist.last_name}"
+            query = f'"{journalist.first_name} {journalist.last_name}" article'
             if journalist.media_name:
                 query += f" {journalist.media_name}"
 
