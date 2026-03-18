@@ -223,7 +223,20 @@ function JournalistsPageContent() {
         header: "IA",
         cell: (info) => {
           const val = info.getValue();
-          if (!val) return <span className="text-muted-foreground text-xs">Non analyse</span>;
+          const row = info.row.original;
+          if (!val) {
+            const isRecent = row.created_at &&
+              (new Date().getTime() - new Date(row.created_at).getTime()) < 5 * 60 * 1000;
+            if (isRecent) {
+              return (
+                <span className="flex items-center gap-1 text-blue-600 text-xs">
+                  <span className="h-3 w-3 animate-spin rounded-full border border-blue-600 border-t-transparent" />
+                  En cours
+                </span>
+              );
+            }
+            return <span className="text-muted-foreground text-xs">Non analyse</span>;
+          }
           return (
             <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-[10px]">
               Analyse

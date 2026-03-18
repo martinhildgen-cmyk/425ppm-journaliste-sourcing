@@ -19,6 +19,50 @@ from app.models.pitch_match import PitchMatch
 
 router = APIRouter(tags=["csv"])
 
+
+@router.get("/import/template")
+async def download_csv_template():
+    """Download an empty CSV template with the expected column headers."""
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(
+        [
+            "prenom",
+            "nom",
+            "email",
+            "poste",
+            "media",
+            "media_type",
+            "media_scope",
+            "linkedin",
+            "twitter",
+            "ville",
+            "pays",
+        ]
+    )
+    writer.writerow(
+        [
+            "Marie",
+            "Dupont",
+            "marie.dupont@lemonde.fr",
+            "Redactrice en chef",
+            "Le Monde",
+            "presse_ecrite",
+            "national",
+            "https://linkedin.com/in/marie-dupont",
+            "",
+            "Paris",
+            "France",
+        ]
+    )
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=template_journalistes.csv"},
+    )
+
+
 # ── CSV Import ──────────────────────────────────────────────────────────────
 
 # Mapping from CSV header variants → model field name
