@@ -78,9 +78,7 @@ class GeminiService(BaseLLMService):
             payload["generationConfig"]["responseMimeType"] = "application/json"
 
         async with httpx.AsyncClient(timeout=30) as client:
-            resp = await client.post(
-                url, json=payload, params={"key": self.api_key}
-            )
+            resp = await client.post(url, json=payload, params={"key": self.api_key})
             resp.raise_for_status()
             data = resp.json()
 
@@ -199,9 +197,7 @@ class MistralService(BaseLLMService):
         )
 
 
-def get_llm_service(
-    provider: str | None = None, model: str | None = None
-) -> BaseLLMService:
+def get_llm_service(provider: str | None = None, model: str | None = None) -> BaseLLMService:
     """Factory — retourne le service LLM configuré.
 
     Args:

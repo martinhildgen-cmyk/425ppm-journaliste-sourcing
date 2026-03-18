@@ -18,23 +18,17 @@ async def get_dashboard_stats(
     _user: dict = Depends(get_current_user),
 ):
     """Return dashboard statistics: totals, alerts, watched count."""
-    total = (
-        await session.execute(select(func.count()).select_from(Journalist))
-    ).scalar_one()
+    total = (await session.execute(select(func.count()).select_from(Journalist))).scalar_one()
 
     alerts = (
         await session.execute(
-            select(func.count())
-            .select_from(Journalist)
-            .where(Journalist.movement_alert == True)  # noqa: E712
+            select(func.count()).select_from(Journalist).where(Journalist.movement_alert == True)  # noqa: E712
         )
     ).scalar_one()
 
     watched = (
         await session.execute(
-            select(func.count())
-            .select_from(Journalist)
-            .where(Journalist.is_watched == True)  # noqa: E712
+            select(func.count()).select_from(Journalist).where(Journalist.is_watched == True)  # noqa: E712
         )
     ).scalar_one()
 
@@ -48,9 +42,7 @@ async def get_dashboard_stats(
 
     email_valid = (
         await session.execute(
-            select(func.count())
-            .select_from(Journalist)
-            .where(Journalist.email_status == "valide")
+            select(func.count()).select_from(Journalist).where(Journalist.email_status == "valide")
         )
     ).scalar_one()
 
@@ -72,9 +64,7 @@ async def get_movement_alerts(
 ):
     """Return journalists with active movement alerts."""
     count_query = (
-        select(func.count())
-        .select_from(Journalist)
-        .where(Journalist.movement_alert == True)  # noqa: E712
+        select(func.count()).select_from(Journalist).where(Journalist.movement_alert == True)  # noqa: E712
     )
     total = (await session.execute(count_query)).scalar_one()
 
@@ -98,7 +88,9 @@ async def get_movement_alerts(
                 "job_title_previous": j.job_title_previous,
                 "media_name": j.media_name,
                 "media_name_previous": j.media_name_previous,
-                "job_last_updated_at": j.job_last_updated_at.isoformat() if j.job_last_updated_at else None,
+                "job_last_updated_at": j.job_last_updated_at.isoformat()
+                if j.job_last_updated_at
+                else None,
             }
             for j in journalists
         ],
@@ -117,12 +109,11 @@ async def dismiss_alert(
     """Dismiss a movement alert for a journalist."""
     from uuid import UUID
 
-    result = await session.execute(
-        select(Journalist).where(Journalist.id == UUID(journalist_id))
-    )
+    result = await session.execute(select(Journalist).where(Journalist.id == UUID(journalist_id)))
     journalist = result.scalar_one_or_none()
     if not journalist:
         from fastapi import HTTPException
+
         raise HTTPException(status_code=404, detail="Journalist not found")
 
     journalist.movement_alert = False
@@ -175,31 +166,22 @@ async def rgpd_registre(
     _user: dict = Depends(get_current_user),
 ):
     """RGPD registre de traitement — summary of personal data held."""
-    total = (
-        await session.execute(select(func.count()).select_from(Journalist))
-    ).scalar_one()
+    total = (await session.execute(select(func.count()).select_from(Journalist))).scalar_one()
 
     with_email = (
         await session.execute(
-            select(func.count())
-            .select_from(Journalist)
-            .where(Journalist.email.isnot(None))
+            select(func.count()).select_from(Journalist).where(Journalist.email.isnot(None))
         )
     ).scalar_one()
 
     with_linkedin = (
         await session.execute(
-            select(func.count())
-            .select_from(Journalist)
-            .where(Journalist.linkedin_url.isnot(None))
+            select(func.count()).select_from(Journalist).where(Journalist.linkedin_url.isnot(None))
         )
     ).scalar_one()
 
     sources = (
-        await session.execute(
-            select(Journalist.source, func.count())
-            .group_by(Journalist.source)
-        )
+        await session.execute(select(Journalist.source, func.count()).group_by(Journalist.source))
     ).all()
 
     return {

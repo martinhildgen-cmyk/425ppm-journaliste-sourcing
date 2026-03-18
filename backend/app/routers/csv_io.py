@@ -51,8 +51,17 @@ IMPORT_FIELD_MAP = {
 }
 
 ALLOWED_FIELDS = {
-    "first_name", "last_name", "job_title", "email", "linkedin_url",
-    "twitter_url", "city", "country", "media_name", "media_type", "media_scope",
+    "first_name",
+    "last_name",
+    "job_title",
+    "email",
+    "linkedin_url",
+    "twitter_url",
+    "city",
+    "country",
+    "media_name",
+    "media_type",
+    "media_scope",
 }
 
 

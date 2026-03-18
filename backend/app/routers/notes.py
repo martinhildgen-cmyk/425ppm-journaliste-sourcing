@@ -22,9 +22,7 @@ async def list_notes(
     _user: dict = Depends(get_current_user),
 ):
     result = await session.execute(
-        select(Note)
-        .where(Note.journalist_id == journalist_id)
-        .order_by(Note.created_at.desc())
+        select(Note).where(Note.journalist_id == journalist_id).order_by(Note.created_at.desc())
     )
     return result.scalars().all()
 
@@ -37,9 +35,7 @@ async def create_note(
     user: dict = Depends(get_current_user),
 ):
     # Verify journalist exists
-    j_result = await session.execute(
-        select(Journalist).where(Journalist.id == journalist_id)
-    )
+    j_result = await session.execute(select(Journalist).where(Journalist.id == journalist_id))
     if not j_result.scalar_one_or_none():
         raise HTTPException(status_code=404, detail="Journalist not found")
 

@@ -34,9 +34,7 @@ async def _add_to_campaign_list(
         return
     campaign_uuid = uuid_mod.UUID(campaign_id)
     # Find or create a default list for this campaign
-    result = await session.execute(
-        select(List).where(List.campaign_id == campaign_uuid).limit(1)
-    )
+    result = await session.execute(select(List).where(List.campaign_id == campaign_uuid).limit(1))
     lst = result.scalar_one_or_none()
     if not lst:
         lst = List(
@@ -161,9 +159,7 @@ async def create_from_profile(
     user: dict = Depends(get_current_user),
 ):
     """Create a journalist from a LinkedIn profile captured by the extension."""
-    journalist = await _create_journalist_from_profile(
-        body.profile, user["id"], session, body.tags
-    )
+    journalist = await _create_journalist_from_profile(body.profile, user["id"], session, body.tags)
     await session.flush()
     await _add_to_campaign_list(session, journalist.id, body.campaignId, user["id"])
     await session.commit()
@@ -173,6 +169,7 @@ async def create_from_profile(
     if not os.environ.get("TESTING"):
         try:
             from app.tasks import enrich_journalist
+
             enrich_journalist.delay(str(journalist.id))
         except Exception:
             pass
@@ -189,9 +186,7 @@ async def create_from_bulk(
     """Create multiple journalists from bulk LinkedIn capture."""
     created = []
     for profile in body.profiles:
-        journalist = await _create_journalist_from_profile(
-            profile, user["id"], session, body.tags
-        )
+        journalist = await _create_journalist_from_profile(profile, user["id"], session, body.tags)
         created.append(journalist)
 
     await session.flush()
@@ -207,6 +202,7 @@ async def create_from_bulk(
         if not os.environ.get("TESTING"):
             try:
                 from app.tasks import enrich_journalist
+
                 enrich_journalist.delay(str(j.id))
             except Exception:
                 pass
@@ -260,6 +256,7 @@ async def create_from_url(
     if not os.environ.get("TESTING"):
         try:
             from app.tasks import enrich_journalist
+
             enrich_journalist.delay(str(journalist.id))
         except Exception:
             pass

@@ -23,7 +23,9 @@ class Note(Base):
         PG_UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
     )
     body: Mapped[str] = mapped_column(Text, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    created_at: Mapped[datetime] = mapped_column(
+        default=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
+    )
 
     journalist = relationship("Journalist", backref="notes", lazy="selectin")
     author = relationship("User", backref="notes", lazy="selectin")

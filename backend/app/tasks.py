@@ -53,9 +53,7 @@ async def _enrich_journalist_async(task, journalist_id: str):
     from app.models.journalist import Journalist
 
     async with _session_factory() as session:
-        result = await session.execute(
-            select(Journalist).where(Journalist.id == journalist_id)
-        )
+        result = await session.execute(select(Journalist).where(Journalist.id == journalist_id))
         journalist = result.scalar_one_or_none()
         if not journalist:
             logger.error("Journalist %s not found", journalist_id)
@@ -203,9 +201,7 @@ async def _discover_and_extract_articles(session: AsyncSession, journalist):
 
     for article in articles:
         # Check if already in DB
-        existing = await session.execute(
-            select(Content).where(Content.url == article.url)
-        )
+        existing = await session.execute(select(Content).where(Content.url == article.url))
         if existing.scalar_one_or_none():
             continue
 
@@ -253,9 +249,7 @@ async def _enrich_email_standalone(journalist_id: str):
     from app.models.journalist import Journalist
 
     async with _session_factory() as session:
-        result = await session.execute(
-            select(Journalist).where(Journalist.id == journalist_id)
-        )
+        result = await session.execute(select(Journalist).where(Journalist.id == journalist_id))
         journalist = result.scalar_one_or_none()
         if not journalist:
             return
@@ -273,9 +267,7 @@ async def _discover_articles_standalone(journalist_id: str):
     from app.models.journalist import Journalist
 
     async with _session_factory() as session:
-        result = await session.execute(
-            select(Journalist).where(Journalist.id == journalist_id)
-        )
+        result = await session.execute(select(Journalist).where(Journalist.id == journalist_id))
         journalist = result.scalar_one_or_none()
         if not journalist:
             return
@@ -296,9 +288,7 @@ async def _analyze_journalist_ai(journalist_id: str):
     from app.services.ai_prompts import run_full_analysis
 
     async with _session_factory() as session:
-        result = await session.execute(
-            select(Journalist).where(Journalist.id == journalist_id)
-        )
+        result = await session.execute(select(Journalist).where(Journalist.id == journalist_id))
         journalist = result.scalar_one_or_none()
         if not journalist:
             logger.error("Journalist %s not found for AI analysis", journalist_id)
@@ -323,10 +313,7 @@ async def _analyze_journalist_ai(journalist_id: str):
             "job_title": journalist.job_title or "",
             "media_name": journalist.media_name or "",
         }
-        articles_list = [
-            {"title": a.title or "", "text": a.body_text or ""}
-            for a in articles
-        ]
+        articles_list = [{"title": a.title or "", "text": a.body_text or ""} for a in articles]
 
         ai_result = await run_full_analysis(journalist_dict, articles_list)
 
@@ -504,7 +491,9 @@ async def _refresh_articles_async():
                 logger.warning("Article refresh failed for %s: %s", journalist.id, e)
 
         await session.commit()
-        logger.info("Article refresh complete: %d/%d journalists refreshed", refreshed, len(journalists))
+        logger.info(
+            "Article refresh complete: %d/%d journalists refreshed", refreshed, len(journalists)
+        )
 
 
 @celery_app.task(bind=True, max_retries=0)

@@ -142,15 +142,16 @@ MOCK_MATCHER_RESPONSE = {
 
 class TestAnalyzeEndpoint:
     @pytest.mark.asyncio
-    async def test_analyze_no_articles_returns_400(
+    async def test_analyze_no_articles_returns_200(
         self, client: AsyncClient, auth_headers: dict, journalist_no_articles
     ):
+        """Analysis is allowed without articles — AI uses journalist metadata only."""
         resp = await client.post(
             f"/ai/journalists/{journalist_no_articles.id}/analyze",
             headers=auth_headers,
             json={"is_draft": False},
         )
-        assert resp.status_code == 400
+        assert resp.status_code == 200
 
     @pytest.mark.asyncio
     async def test_analyze_not_found_returns_404(

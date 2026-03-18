@@ -218,6 +218,7 @@ async def run_profiler(
             logger.warning("Profiler failed (attempt %d): %s", attempt + 1, e)
             if attempt < 2:
                 import asyncio
+
                 await asyncio.sleep(1 * (attempt + 1))
 
     return None
@@ -262,6 +263,7 @@ async def run_classifier(
             logger.warning("Classifier failed (attempt %d): %s", attempt + 1, e)
             if attempt < 2:
                 import asyncio
+
                 await asyncio.sleep(1 * (attempt + 1))
 
     return None
@@ -291,6 +293,7 @@ async def run_matcher(
     # Use mid-tier model for matcher (needs more reasoning)
     if model is None:
         from app.config import settings
+
         effective_provider = provider or settings.LLM_PROVIDER
         if effective_provider == "gemini":
             model = "gemini-2.5-flash"
@@ -331,6 +334,7 @@ async def run_matcher(
             logger.warning("Matcher failed (attempt %d): %s", attempt + 1, e)
             if attempt < 2:
                 import asyncio
+
                 await asyncio.sleep(1 * (attempt + 1))
 
     return None

@@ -137,9 +137,7 @@ async def get_journalist(
     _user: dict = Depends(get_current_user),
 ):
     """Get a single journalist by ID. Updates last_accessed_at for RGPD tracking."""
-    result = await session.execute(
-        select(Journalist).where(Journalist.id == journalist_id)
-    )
+    result = await session.execute(select(Journalist).where(Journalist.id == journalist_id))
     journalist = result.scalar_one_or_none()
     if not journalist:
         raise HTTPException(status_code=404, detail="Journalist not found")
@@ -158,9 +156,7 @@ async def update_journalist(
     _user: dict = Depends(get_current_user),
 ):
     """Update a journalist."""
-    result = await session.execute(
-        select(Journalist).where(Journalist.id == journalist_id)
-    )
+    result = await session.execute(select(Journalist).where(Journalist.id == journalist_id))
     journalist = result.scalar_one_or_none()
     if not journalist:
         raise HTTPException(status_code=404, detail="Journalist not found")
@@ -201,9 +197,7 @@ async def delete_journalist(
     _user: dict = Depends(get_current_user),
 ):
     """Delete a journalist (RGPD: droit à l'oubli)."""
-    result = await session.execute(
-        select(Journalist).where(Journalist.id == journalist_id)
-    )
+    result = await session.execute(select(Journalist).where(Journalist.id == journalist_id))
     journalist = result.scalar_one_or_none()
     if not journalist:
         raise HTTPException(status_code=404, detail="Journalist not found")
