@@ -23,7 +23,9 @@ def upgrade() -> None:
     # Users
     op.create_table(
         "users",
-        sa.Column("id", UUID(as_uuid=True), server_default=sa.text("gen_random_uuid()"), primary_key=True),
+        sa.Column(
+            "id", UUID(as_uuid=True), server_default=sa.text("gen_random_uuid()"), primary_key=True
+        ),
         sa.Column("email", sa.String(255), unique=True, nullable=False),
         sa.Column("full_name", sa.String(255), nullable=False),
         sa.Column("role", sa.String(50), server_default="user"),
@@ -33,7 +35,9 @@ def upgrade() -> None:
     # Journalists
     op.create_table(
         "journalists",
-        sa.Column("id", UUID(as_uuid=True), server_default=sa.text("gen_random_uuid()"), primary_key=True),
+        sa.Column(
+            "id", UUID(as_uuid=True), server_default=sa.text("gen_random_uuid()"), primary_key=True
+        ),
         sa.Column("first_name", sa.String(255)),
         sa.Column("last_name", sa.String(255)),
         sa.Column("job_title", sa.String(500)),
@@ -71,8 +75,15 @@ def upgrade() -> None:
     # Contents
     op.create_table(
         "contents",
-        sa.Column("id", UUID(as_uuid=True), server_default=sa.text("gen_random_uuid()"), primary_key=True),
-        sa.Column("journalist_id", UUID(as_uuid=True), sa.ForeignKey("journalists.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "id", UUID(as_uuid=True), server_default=sa.text("gen_random_uuid()"), primary_key=True
+        ),
+        sa.Column(
+            "journalist_id",
+            UUID(as_uuid=True),
+            sa.ForeignKey("journalists.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
         sa.Column("content_type", sa.String(50)),
         sa.Column("title", sa.String(1000)),
         sa.Column("url", sa.String(2000), unique=True),
@@ -84,7 +95,9 @@ def upgrade() -> None:
     # Clients
     op.create_table(
         "clients",
-        sa.Column("id", UUID(as_uuid=True), server_default=sa.text("gen_random_uuid()"), primary_key=True),
+        sa.Column(
+            "id", UUID(as_uuid=True), server_default=sa.text("gen_random_uuid()"), primary_key=True
+        ),
         sa.Column("name", sa.String(500), nullable=False),
         sa.Column("sector", sa.String(255)),
         sa.Column("description", sa.Text()),
@@ -97,7 +110,9 @@ def upgrade() -> None:
     # Campaigns
     op.create_table(
         "campaigns",
-        sa.Column("id", UUID(as_uuid=True), server_default=sa.text("gen_random_uuid()"), primary_key=True),
+        sa.Column(
+            "id", UUID(as_uuid=True), server_default=sa.text("gen_random_uuid()"), primary_key=True
+        ),
         sa.Column("client_id", UUID(as_uuid=True), sa.ForeignKey("clients.id", ondelete="CASCADE")),
         sa.Column("name", sa.String(500), nullable=False),
         sa.Column("description", sa.Text()),
@@ -110,8 +125,12 @@ def upgrade() -> None:
     # Lists
     op.create_table(
         "lists",
-        sa.Column("id", UUID(as_uuid=True), server_default=sa.text("gen_random_uuid()"), primary_key=True),
-        sa.Column("campaign_id", UUID(as_uuid=True), sa.ForeignKey("campaigns.id", ondelete="CASCADE")),
+        sa.Column(
+            "id", UUID(as_uuid=True), server_default=sa.text("gen_random_uuid()"), primary_key=True
+        ),
+        sa.Column(
+            "campaign_id", UUID(as_uuid=True), sa.ForeignKey("campaigns.id", ondelete="CASCADE")
+        ),
         sa.Column("name", sa.String(500), nullable=False),
         sa.Column("owner_id", UUID(as_uuid=True), sa.ForeignKey("users.id")),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("NOW()")),
@@ -121,8 +140,18 @@ def upgrade() -> None:
     # List ↔ Journalists (N:N)
     op.create_table(
         "list_journalists",
-        sa.Column("list_id", UUID(as_uuid=True), sa.ForeignKey("lists.id", ondelete="CASCADE"), primary_key=True),
-        sa.Column("journalist_id", UUID(as_uuid=True), sa.ForeignKey("journalists.id", ondelete="CASCADE"), primary_key=True),
+        sa.Column(
+            "list_id",
+            UUID(as_uuid=True),
+            sa.ForeignKey("lists.id", ondelete="CASCADE"),
+            primary_key=True,
+        ),
+        sa.Column(
+            "journalist_id",
+            UUID(as_uuid=True),
+            sa.ForeignKey("journalists.id", ondelete="CASCADE"),
+            primary_key=True,
+        ),
         sa.Column("added_at", sa.DateTime(timezone=True), server_default=sa.text("NOW()")),
         sa.Column("added_by", UUID(as_uuid=True), sa.ForeignKey("users.id")),
     )
@@ -130,8 +159,12 @@ def upgrade() -> None:
     # Notes
     op.create_table(
         "notes",
-        sa.Column("id", UUID(as_uuid=True), server_default=sa.text("gen_random_uuid()"), primary_key=True),
-        sa.Column("journalist_id", UUID(as_uuid=True), sa.ForeignKey("journalists.id", ondelete="CASCADE")),
+        sa.Column(
+            "id", UUID(as_uuid=True), server_default=sa.text("gen_random_uuid()"), primary_key=True
+        ),
+        sa.Column(
+            "journalist_id", UUID(as_uuid=True), sa.ForeignKey("journalists.id", ondelete="CASCADE")
+        ),
         sa.Column("author_id", UUID(as_uuid=True), sa.ForeignKey("users.id")),
         sa.Column("body", sa.Text(), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("NOW()")),
@@ -140,8 +173,12 @@ def upgrade() -> None:
     # Pitch matches
     op.create_table(
         "pitch_matches",
-        sa.Column("id", UUID(as_uuid=True), server_default=sa.text("gen_random_uuid()"), primary_key=True),
-        sa.Column("journalist_id", UUID(as_uuid=True), sa.ForeignKey("journalists.id", ondelete="CASCADE")),
+        sa.Column(
+            "id", UUID(as_uuid=True), server_default=sa.text("gen_random_uuid()"), primary_key=True
+        ),
+        sa.Column(
+            "journalist_id", UUID(as_uuid=True), sa.ForeignKey("journalists.id", ondelete="CASCADE")
+        ),
         sa.Column("pitch_subject", sa.Text(), nullable=False),
         sa.Column("score_match", sa.Integer()),
         sa.Column("verdict", sa.String(20)),
@@ -156,7 +193,9 @@ def upgrade() -> None:
     # Prompt versions
     op.create_table(
         "prompt_versions",
-        sa.Column("id", UUID(as_uuid=True), server_default=sa.text("gen_random_uuid()"), primary_key=True),
+        sa.Column(
+            "id", UUID(as_uuid=True), server_default=sa.text("gen_random_uuid()"), primary_key=True
+        ),
         sa.Column("prompt_name", sa.String(100), nullable=False),
         sa.Column("version", sa.Integer(), nullable=False),
         sa.Column("system_prompt", sa.Text(), nullable=False),
@@ -171,7 +210,9 @@ def upgrade() -> None:
     # Audit log
     op.create_table(
         "audit_log",
-        sa.Column("id", UUID(as_uuid=True), server_default=sa.text("gen_random_uuid()"), primary_key=True),
+        sa.Column(
+            "id", UUID(as_uuid=True), server_default=sa.text("gen_random_uuid()"), primary_key=True
+        ),
         sa.Column("user_id", UUID(as_uuid=True), sa.ForeignKey("users.id")),
         sa.Column("action", sa.String(100), nullable=False),
         sa.Column("entity_type", sa.String(100)),
@@ -188,7 +229,9 @@ def upgrade() -> None:
     op.create_index("idx_journalists_sector", "journalists", ["sector_macro"])
     op.create_index("idx_journalists_tags", "journalists", ["tags_micro"], postgresql_using="gin")
     op.create_index(
-        "idx_journalists_watched", "journalists", ["is_watched"],
+        "idx_journalists_watched",
+        "journalists",
+        ["is_watched"],
         postgresql_where=sa.text("is_watched = true"),
     )
     op.create_index("idx_contents_journalist", "contents", ["journalist_id", "published_at"])

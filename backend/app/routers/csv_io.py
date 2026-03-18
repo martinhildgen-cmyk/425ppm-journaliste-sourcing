@@ -2,7 +2,6 @@
 
 import csv
 import io
-import uuid as uuid_mod
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
@@ -11,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.auth import get_current_user
+from app.auth import get_current_user, get_user_uuid
 from app.database import get_session
 from app.models.journalist import Journalist
 from app.models.list import List
@@ -172,7 +171,7 @@ async def import_csv(
             journalist = Journalist(
                 **data,
                 source="csv_import",
-                owner_id=uuid_mod.UUID(user["id"]),
+                owner_id=get_user_uuid(user),
             )
             session.add(journalist)
             created += 1

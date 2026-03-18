@@ -1,6 +1,5 @@
 """AI Router — endpoints for AI analysis and pitch matching."""
 
-import uuid as uuid_mod
 from datetime import datetime, timezone
 from uuid import UUID
 
@@ -8,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import get_current_user
+from app.auth import get_current_user, get_user_uuid
 from app.database import get_session
 from app.models.content import Content
 from app.models.journalist import Journalist
@@ -146,7 +145,7 @@ async def pitch_match(
         bad_buzz_risk=result.get("bad_buzz_risk", False),
         risk_details=result.get("risk_details"),
         is_draft=body.is_draft,
-        created_by=uuid_mod.UUID(user["id"]),
+        created_by=get_user_uuid(user),
     )
     session.add(pitch)
     await session.commit()
