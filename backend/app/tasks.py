@@ -169,7 +169,7 @@ async def _discover_and_extract_articles(session: AsyncSession, journalist):
         trafilatura_breaker,
     )
 
-    query = f"{journalist.first_name} {journalist.last_name}"
+    query = f'"{journalist.first_name} {journalist.last_name}" article'
     if journalist.media_name:
         query += f" {journalist.media_name}"
 

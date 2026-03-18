@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 SEARCH_URL = "https://api.search.brave.com/res/v1/web/search"
 
-# Domains that are social media or directory sites, not article sources.
+# Domains that are social media, directory, or profile aggregator sites.
 _FILTERED_DOMAINS = {
     "facebook.com",
     "twitter.com",
@@ -33,7 +33,29 @@ _FILTERED_DOMAINS = {
     "pagesjaunes.fr",
     "societe.com",
     "kompass.com",
+    "muckrack.com",
+    "journalistes.ouest-france.fr",
+    "babbler.fr",
+    "cision.com",
+    "prowly.com",
+    "meltwater.com",
+    "prezly.com",
 }
+
+# URL path patterns that indicate a profile/author page rather than an article.
+_PROFILE_PATTERNS = [
+    "/author/",
+    "/auteur/",
+    "/journaliste/",
+    "/journalist/",
+    "/profile/",
+    "/profil/",
+    "/contributor/",
+    "/signataires/",
+    "ses-dernieres-publications",
+    "ses-derniers-articles",
+    "biographie",
+]
 
 
 @dataclass
@@ -65,7 +87,7 @@ class BraveSearchService:
         }
         params = {
             "q": query,
-            "count": count,
+            "count": count + 10,  # Request extra to compensate for filtering
             "search_lang": "fr",
         }
 
@@ -94,17 +116,22 @@ class BraveSearchService:
 
         for item in raw_results:
             url: str = item.get("url", "")
+            title: str = item.get("title", "")
             if self._is_filtered(url):
+                continue
+            if self._is_likely_profile(title):
                 continue
 
             articles.append(
                 ArticleResult(
-                    title=item.get("title", ""),
+                    title=title,
                     url=url,
                     description=item.get("description"),
                     published_date=item.get("page_age"),
                 )
             )
+            if len(articles) >= count:
+                break
 
         return articles
 
@@ -114,14 +141,38 @@ class BraveSearchService:
 
     @staticmethod
     def _is_filtered(url: str) -> bool:
-        """Return True if the URL belongs to a filtered domain."""
+        """Return True if the URL belongs to a filtered domain or is a profile page."""
+        url_lower = url.lower()
         try:
-            # Extract domain from URL without importing urllib.
-            # Brave results always contain well-formed URLs.
-            host = url.split("//", 1)[1].split("/", 1)[0].lower()
+            # Check domain
+            host = url_lower.split("//", 1)[1].split("/", 1)[0]
             for domain in _FILTERED_DOMAINS:
                 if host == domain or host.endswith(f".{domain}"):
                     return True
         except (IndexError, AttributeError):
             pass
+
+        # Check URL path patterns that indicate profile/author pages
+        for pattern in _PROFILE_PATTERNS:
+            if pattern in url_lower:
+                return True
+
         return False
+
+    @staticmethod
+    def _is_likely_profile(title: str) -> bool:
+        """Return True if the title looks like a journalist profile page."""
+        title_lower = title.lower()
+        profile_signals = [
+            "ses dernières publications",
+            "ses dernieres publications",
+            "ses derniers articles",
+            "'s profile",
+            "profil de",
+            "biographie de",
+            "journalist |",
+            "journaliste |",
+            "tous les articles de",
+            "all articles by",
+        ]
+        return any(signal in title_lower for signal in profile_signals)
