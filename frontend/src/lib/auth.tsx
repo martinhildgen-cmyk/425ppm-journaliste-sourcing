@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext } from "react";
 
 interface AuthContextType {
   token: string | null;
@@ -11,55 +11,24 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType>({
-  token: null,
-  loading: true,
-  authenticated: false,
+  token: "no-auth",
+  loading: false,
+  authenticated: true,
   setToken: () => {},
   logout: () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [token, setTokenState] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const stored = localStorage.getItem("token");
-    if (stored) {
-      setTokenState(stored);
-    }
-    setLoading(false);
-  }, []);
-
-  const setToken = (t: string | null) => {
-    setTokenState(t);
-    if (t) {
-      localStorage.setItem("token", t);
-    } else {
-      localStorage.removeItem("token");
-    }
-  };
-
-  const logout = async () => {
-    const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-    try {
-      await fetch(`${BASE_URL}/auth/logout`, {
-        method: "POST",
-        credentials: "include",
-      });
-    } catch {
-      // ignore
-    }
-    setToken(null);
-  };
-
   return (
     <AuthContext.Provider
       value={{
-        token,
-        loading,
-        authenticated: !!token,
-        setToken,
-        logout,
+        token: "no-auth",
+        loading: false,
+        authenticated: true,
+        setToken: () => {},
+        logout: () => {
+          window.location.href = "/";
+        },
       }}
     >
       {children}
