@@ -62,5 +62,10 @@ export async function apiFetch<T>(
     );
   }
 
+  // 204 No Content — return empty
+  if (res.status === 204) {
+    return undefined as T;
+  }
+
   return res.json() as Promise<T>;
 }
