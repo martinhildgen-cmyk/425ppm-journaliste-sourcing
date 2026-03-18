@@ -80,13 +80,29 @@ class ArticleExtractorService:
                 with_metadata=True,
             )
             # Grab metadata via bare_extraction for structured access.
-            meta = trafilatura.bare_extraction(downloaded) or {}
+            meta = trafilatura.bare_extraction(downloaded)
+
+            # bare_extraction may return a Document object or a dict depending on version
+            if meta is not None:
+                if hasattr(meta, "title"):
+                    # Document object (newer trafilatura)
+                    meta_title = meta.title
+                    meta_author = meta.author
+                    meta_date = meta.date
+                elif isinstance(meta, dict):
+                    meta_title = meta.get("title")
+                    meta_author = meta.get("author")
+                    meta_date = meta.get("date")
+                else:
+                    meta_title = meta_author = meta_date = None
+            else:
+                meta_title = meta_author = meta_date = None
 
             return ArticleContent(
-                title=meta.get("title"),
+                title=meta_title,
                 text=text,
-                author=meta.get("author"),
-                date=meta.get("date"),
+                author=meta_author,
+                date=meta_date,
                 url=url,
             )
         except Exception:

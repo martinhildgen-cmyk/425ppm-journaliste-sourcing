@@ -217,13 +217,23 @@ async def _discover_and_extract_articles(session: AsyncSession, journalist):
         except Exception:
             pass
 
+        # Parse published_date string to datetime
+        pub_date = None
+        if article.published_date:
+            from dateutil import parser as dateparser
+
+            try:
+                pub_date = dateparser.parse(article.published_date)
+            except (ValueError, TypeError):
+                pass
+
         content = Content(
             journalist_id=journalist.id,
             url=article.url,
             title=article.title,
             content_type="article",
             body_text=body_text or article.description,
-            published_at=article.published_date,
+            published_at=pub_date,
         )
         session.add(content)
         extracted_urls.append(article.url)
