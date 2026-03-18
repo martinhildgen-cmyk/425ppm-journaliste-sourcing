@@ -41,12 +41,12 @@ async def trigger_enrichment(
     # Article discovery via Brave Search
     if journalist.first_name and journalist.last_name and settings.BRAVE_SEARCH_API_KEY:
         try:
-            from app.services.brave_search import BraveSearchService
             from app.services.article_extractor import ArticleExtractorService
+            from app.services.brave_search import BraveSearchService, build_article_query
 
-            query = f'"{journalist.first_name} {journalist.last_name}" article'
-            if journalist.media_name:
-                query += f" {journalist.media_name}"
+            query = build_article_query(
+                journalist.first_name, journalist.last_name, journalist.media_name
+            )
 
             search_service = BraveSearchService(settings.BRAVE_SEARCH_API_KEY)
             articles = await search_service.search_articles(query, count=5)

@@ -54,6 +54,58 @@ _PROFILE_PATTERNS = [
     "biographie",
 ]
 
+# Known media name → domain mappings for targeted site: searches.
+_MEDIA_DOMAINS: dict[str, str] = {
+    "le monde": "lemonde.fr",
+    "le figaro": "lefigaro.fr",
+    "libération": "liberation.fr",
+    "liberation": "liberation.fr",
+    "les echos": "lesechos.fr",
+    "les échos": "lesechos.fr",
+    "l'express": "lexpress.fr",
+    "le point": "lepoint.fr",
+    "l'obs": "nouvelobs.com",
+    "le parisien": "leparisien.fr",
+    "mediapart": "mediapart.fr",
+    "france info": "francetvinfo.fr",
+    "franceinfo": "francetvinfo.fr",
+    "20 minutes": "20minutes.fr",
+    "ouest-france": "ouest-france.fr",
+    "la tribune": "latribune.fr",
+    "challenges": "challenges.fr",
+    "bfm": "bfmtv.com",
+    "tf1": "tf1info.fr",
+    "france 24": "france24.com",
+    "rfi": "rfi.fr",
+    "huffington post": "huffingtonpost.fr",
+    "huffpost": "huffingtonpost.fr",
+    "slate": "slate.fr",
+    "konbini": "konbini.com",
+    "numerama": "numerama.com",
+    "01net": "01net.com",
+    "la croix": "la-croix.com",
+    "courrier international": "courrierinternational.com",
+    "capital": "capital.fr",
+    "europe 1": "europe1.fr",
+}
+
+
+def build_article_query(first_name: str, last_name: str, media_name: str | None = None) -> str:
+    """Build an optimized search query to find articles by a journalist.
+
+    Uses site: operator when the media domain is known.
+    """
+    name_part = f'"{first_name} {last_name}"'
+
+    if media_name:
+        media_lower = media_name.strip().lower()
+        domain = _MEDIA_DOMAINS.get(media_lower)
+        if domain:
+            return f"{name_part} site:{domain}"
+        return f"{name_part} article {media_name}"
+
+    return f"{name_part} article"
+
 
 @dataclass
 class ArticleResult:
@@ -84,7 +136,7 @@ class BraveSearchService:
         }
         params = {
             "q": query,
-            "count": count + 10,  # Request extra to compensate for filtering
+            "count": 20,  # Request many to compensate for heavy filtering
             "search_lang": "fr",
         }
 
