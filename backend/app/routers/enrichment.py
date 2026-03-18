@@ -49,11 +49,11 @@ async def trigger_enrichment(
                 journalist.first_name, journalist.last_name, journalist.media_name
             )
             debug_query = query
-            logger.info("Enrichment query: %s", query)
+            logger.warning("Enrichment query: %s", query)
 
             search_service = BraveSearchService(settings.BRAVE_SEARCH_API_KEY)
             articles = await search_service.search_articles(query, count=5)
-            logger.info("Enrichment found %d articles for query: %s", len(articles), query)
+            logger.warning("Enrichment found %d articles for query: %s", len(articles), query)
 
             extractor = ArticleExtractorService()
             for article in articles:
