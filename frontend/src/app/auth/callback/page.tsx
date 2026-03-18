@@ -10,13 +10,14 @@ function CallbackHandler() {
   const { setToken } = useAuth();
 
   useEffect(() => {
+    // Legacy support: if token is in URL params (old flow), store it
     const token = searchParams.get("token");
     if (token) {
       setToken(token);
-      router.replace("/dashboard");
-    } else {
-      router.replace("/login");
     }
+    // In the new flow, cookies are already set by the backend redirect.
+    // Either way, redirect to dashboard.
+    router.replace("/dashboard");
   }, [searchParams, setToken, router]);
 
   return <p className="text-muted-foreground">Connexion en cours...</p>;

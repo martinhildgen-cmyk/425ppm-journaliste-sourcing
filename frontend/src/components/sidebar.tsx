@@ -40,8 +40,8 @@ export function Sidebar() {
   const router = useRouter();
   const { logout } = useAuth();
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     router.replace("/login");
   };
 
