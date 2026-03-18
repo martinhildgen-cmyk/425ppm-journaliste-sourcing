@@ -88,6 +88,43 @@ export default function ImportPage() {
         </p>
       </div>
 
+      {/* Format instructions */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Format attendu</CardTitle>
+          <CardDescription>
+            Le fichier CSV doit contenir au minimum un prenom, nom ou email par ligne
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="rounded-md bg-muted p-3 text-xs font-mono overflow-x-auto">
+            prenom, nom, email, poste, media, media_type, media_scope, linkedin, twitter, ville, pays
+          </div>
+          <div className="flex items-center gap-4">
+            <p className="text-sm text-muted-foreground">
+              <strong>media_type</strong> : presse_ecrite, tv, radio, web, podcast, agence
+              &nbsp;·&nbsp;
+              <strong>media_scope</strong> : national, regional, international, specialise
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+                window.open(`${BASE_URL}/import/template`, "_blank");
+              }}
+            >
+              Telecharger le modele CSV
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              Encodage UTF-8, separateur virgule. Les doublons (email ou LinkedIn) sont ignores.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>Uploader un fichier</CardTitle>
