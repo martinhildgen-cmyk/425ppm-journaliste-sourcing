@@ -5,6 +5,21 @@ interface FetchOptions extends RequestInit {
   token?: string;
 }
 
+let isRefreshing = false;
+let refreshPromise: Promise<boolean> | null = null;
+
+async function tryRefreshToken(): Promise<boolean> {
+  try {
+    const res = await fetch(`${BASE_URL}/auth/refresh`, {
+      method: "POST",
+      credentials: "include",
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 export async function apiFetch<T>(
   path: string,
   options: FetchOptions = {},
@@ -15,6 +30,7 @@ export async function apiFetch<T>(
   let res: Response;
   try {
     res = await fetch(url, {
+      credentials: "include",
       headers: {
         "Content-Type": "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -31,9 +47,33 @@ export async function apiFetch<T>(
     );
   }
 
+  if (res.status === 401 && !path.includes("/auth/")) {
+    // Try to refresh the access token
+    if (!isRefreshing) {
+      isRefreshing = true;
+      refreshPromise = tryRefreshToken();
+    }
+    const refreshed = await refreshPromise;
+    isRefreshing = false;
+    refreshPromise = null;
+
+    if (refreshed) {
+      // Retry the original request with the new cookie
+      res = await fetch(url, {
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...headers,
+        },
+        ...rest,
+      });
+    }
+  }
+
   if (!res.ok) {
     if (res.status === 401) {
-      // Token expired or invalid — clear it and redirect to login
+      // Refresh failed too — redirect to login
       if (typeof window !== "undefined") {
         localStorage.removeItem("token");
         window.location.href = "/login";

@@ -1,5 +1,9 @@
 """
-Authentication middleware — Google OAuth2 + JWT.
+Authentication middleware — Google OAuth2 + JWT with HttpOnly cookies.
+
+Supports two auth modes:
+  - HttpOnly cookies (frontend web app)
+  - Bearer token header (Chrome extension, API clients)
 
 Usage in routers:
     from app.auth import get_current_user
@@ -10,22 +14,33 @@ Usage in routers:
 
 from datetime import datetime, timedelta, timezone
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 
 from app.config import settings
 
-security = HTTPBearer()
+# Optional bearer — won't fail if no Authorization header (we check cookie too)
+security = HTTPBearer(auto_error=False)
+
+REFRESH_TOKEN_EXPIRE_DAYS = 7
 
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
-    """Create a JWT access token."""
+    """Create a short-lived JWT access token (default 60 min)."""
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + (
         expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     )
-    to_encode.update({"exp": expire})
+    to_encode.update({"exp": expire, "type": "access"})
+    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+
+
+def create_refresh_token(data: dict) -> str:
+    """Create a long-lived JWT refresh token (7 days)."""
+    to_encode = data.copy()
+    expire = datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+    to_encode.update({"exp": expire, "type": "refresh"})
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
 
@@ -42,11 +57,46 @@ def decode_access_token(token: str) -> dict:
         ) from e
 
 
+def decode_refresh_token(token: str) -> dict:
+    """Decode and validate a refresh token."""
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+        if payload.get("type") != "refresh":
+            raise JWTError("Not a refresh token")
+        return payload
+    except JWTError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired refresh token",
+        ) from e
+
+
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
 ) -> dict:
-    """FastAPI dependency that extracts and validates the current user from JWT."""
-    payload = decode_access_token(credentials.credentials)
+    """Extract and validate current user from cookie or Bearer header.
+
+    Priority: Bearer header (extension) > cookie (web app).
+    """
+    token: str | None = None
+
+    # 1. Try Bearer header (Chrome extension, API clients)
+    if credentials:
+        token = credentials.credentials
+
+    # 2. Fallback to HttpOnly cookie (web frontend)
+    if not token:
+        token = request.cookies.get("access_token")
+
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    payload = decode_access_token(token)
     user_id = payload.get("sub")
     if user_id is None:
         raise HTTPException(

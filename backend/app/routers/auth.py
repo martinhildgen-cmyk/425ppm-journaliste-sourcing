@@ -2,12 +2,18 @@ import logging
 from urllib.parse import urlencode
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import create_access_token, get_current_user
+from app.auth import (
+    REFRESH_TOKEN_EXPIRE_DAYS,
+    create_access_token,
+    create_refresh_token,
+    decode_refresh_token,
+    get_current_user,
+)
 from app.config import settings
 from app.database import get_session
 from app.models.user import User
@@ -30,6 +36,35 @@ def _build_redirect_uri(request: Request) -> str:
     if settings.ENVIRONMENT != "development" and redirect_uri.startswith("http://"):
         redirect_uri = redirect_uri.replace("http://", "https://", 1)
     return redirect_uri
+
+
+def _set_auth_cookies(response: Response, access_token: str, refresh_token: str) -> None:
+    """Set HttpOnly auth cookies on a response."""
+    is_prod = settings.ENVIRONMENT != "development"
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=is_prod,
+        samesite="lax",
+        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        path="/",
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=is_prod,
+        samesite="lax",
+        max_age=REFRESH_TOKEN_EXPIRE_DAYS * 86400,
+        path="/auth/refresh",
+    )
+
+
+def _clear_auth_cookies(response: Response) -> None:
+    """Clear auth cookies."""
+    response.delete_cookie("access_token", path="/")
+    response.delete_cookie("refresh_token", path="/auth/refresh")
 
 
 @router.get("/google/login")
@@ -55,7 +90,7 @@ async def google_callback(
     error: str | None = None,
     session: AsyncSession = Depends(get_session),
 ):
-    """Handle Google OAuth2 callback — exchange code, upsert user, return JWT."""
+    """Handle Google OAuth2 callback — exchange code, upsert user, set cookies."""
     if error:
         logger.error("Google OAuth error: %s", error)
         raise HTTPException(status_code=400, detail=f"Google OAuth error: {error}")
@@ -124,19 +159,50 @@ async def google_callback(
         logger.exception("Database error during user upsert for %s", email)
         raise HTTPException(status_code=500, detail="Database error during login")
 
-    access_token = create_access_token(
-        data={
-            "sub": str(user.id),
-            "email": user.email,
-            "role": user.role,
-        }
-    )
+    token_data_jwt = {
+        "sub": str(user.id),
+        "email": user.email,
+        "role": user.role,
+    }
+    access_token = create_access_token(data=token_data_jwt)
+    refresh_token = create_refresh_token(data=token_data_jwt)
     logger.info("User %s logged in successfully", email)
 
-    # Redirect to frontend with token
+    # Redirect to frontend with cookies set
     frontend_url = settings.FRONTEND_URL.rstrip("/")
-    redirect_url = f"{frontend_url}/auth/callback?token={access_token}"
-    return RedirectResponse(redirect_url)
+    response = RedirectResponse(f"{frontend_url}/auth/callback")
+    _set_auth_cookies(response, access_token, refresh_token)
+    return response
+
+
+@router.post("/refresh")
+async def refresh_access_token(request: Request):
+    """Refresh the access token using the refresh token cookie."""
+    refresh_token = request.cookies.get("refresh_token")
+    if not refresh_token:
+        raise HTTPException(status_code=401, detail="No refresh token")
+
+    payload = decode_refresh_token(refresh_token)
+
+    token_data_jwt = {
+        "sub": payload["sub"],
+        "email": payload.get("email"),
+        "role": payload.get("role"),
+    }
+    new_access_token = create_access_token(data=token_data_jwt)
+    new_refresh_token = create_refresh_token(data=token_data_jwt)
+
+    response = Response(content='{"ok": true}', media_type="application/json")
+    _set_auth_cookies(response, new_access_token, new_refresh_token)
+    return response
+
+
+@router.post("/logout")
+async def logout():
+    """Clear auth cookies."""
+    response = Response(content='{"ok": true}', media_type="application/json")
+    _clear_auth_cookies(response)
+    return response
 
 
 @router.get("/me", response_model=UserRead)

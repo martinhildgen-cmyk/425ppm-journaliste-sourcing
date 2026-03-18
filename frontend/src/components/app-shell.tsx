@@ -8,7 +8,7 @@ import { useEffect } from "react";
 const PUBLIC_PATHS = ["/", "/login", "/auth/callback"];
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { token } = useAuth();
+  const { authenticated, loading } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
   const isPublic = PUBLIC_PATHS.some(
@@ -16,12 +16,20 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   );
 
   useEffect(() => {
-    if (!token && !isPublic) {
+    if (!loading && !authenticated && !isPublic) {
       router.replace("/login");
     }
-  }, [token, isPublic, router]);
+  }, [authenticated, loading, isPublic, router]);
 
-  if (!token && !isPublic) {
+  if (loading && !isPublic) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <p className="text-muted-foreground">Chargement...</p>
+      </div>
+    );
+  }
+
+  if (!authenticated && !isPublic) {
     return null;
   }
 
